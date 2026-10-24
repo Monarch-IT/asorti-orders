@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Bundle
+import android.util.Base64
 import android.view.View
 import android.webkit.JavascriptInterface
 import android.webkit.WebChromeClient
@@ -25,7 +26,10 @@ import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
+import java.io.File
+import java.io.FileOutputStream
 
 class MainActivity : AppCompatActivity() {
 
@@ -163,6 +167,62 @@ class MainActivity : AppCompatActivity() {
     }
 
     inner class OrdersNativeBridge(private val context: Context) {
+        @JavascriptInterface
+        fun shareFileToTelegram(base64Data: String, fileName: String, mimeType: String, text: String) {
+            runOnUiThread {
+                try {
+                    val cleanBase64 = if (base64Data.contains(",")) {
+                        base64Data.substringAfter(",")
+                    } else {
+                        base64Data
+                    }
+                    val fileBytes = Base64.decode(cleanBase64, Base64.DEFAULT)
+                    val shareDir = File(context.cacheDir, "shares")
+                    if (!shareDir.exists()) {
+                        shareDir.mkdirs()
+                    }
+                    val file = File(shareDir, fileName)
+                    FileOutputStream(file).use { fos ->
+                        fos.write(fileBytes)
+                        fos.flush()
+                    }
+
+                    val contentUri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        file
+                    )
+
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = if (mimeType.isNotBlank()) mimeType else "*/*"
+                        putExtra(Intent.EXTRA_STREAM, contentUri)
+                        if (text.isNotBlank()) {
+                            putExtra(Intent.EXTRA_TEXT, text)
+                        }
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        setPackage("org.telegram.messenger")
+                    }
+
+                    if (intent.resolveActivity(packageManager) != null) {
+                        startActivity(intent)
+                    } else {
+                        val fallbackIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = if (mimeType.isNotBlank()) mimeType else "*/*"
+                            putExtra(Intent.EXTRA_STREAM, contentUri)
+                            if (text.isNotBlank()) {
+                                putExtra(Intent.EXTRA_TEXT, text)
+                            }
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+                        val chooser = Intent.createChooser(fallbackIntent, "Отправить файл через Telegram")
+                        startActivity(chooser)
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Ошибка отправки файла: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
         @JavascriptInterface
         fun shareToTelegram(text: String, fileUrl: String) {
             runOnUiThread {

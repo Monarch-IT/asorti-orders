@@ -431,11 +431,11 @@ function sanitizeXml(str) {
 }
 
 function initNavigation() {
-  const allTabs = document.querySelectorAll('.desktop-tab-btn, .nav-item');
+  const allTabs = document.querySelectorAll('.desktop-tab-btn, .nav-item[data-tab]');
   allTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       const targetId = tab.getAttribute('data-tab');
-      switchTab(targetId);
+      if (targetId) switchTab(targetId);
     });
   });
 }
@@ -1325,7 +1325,16 @@ async function downloadBatchOrders(fmt) {
   }
 }
 
-async function shareOrderToTelegram() {
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function shareOrderFileToTelegram(fmt) {
   if (!selectedOrder) return;
   const o = selectedOrder;
   const cisFormatted = o.deliveryDate ? o.deliveryDate.split('-').reverse().join('.') : '-';
@@ -1345,36 +1354,63 @@ async function shareOrderToTelegram() {
 
   text += '\nТовары:\n' + itemsText + '\n\n' +
     'ИТОГО К ОПЛАТЕ: ' + formatPrice(o.totalAmount) + ' сум\n' +
-    'Агент: ' + (o.agentName || 'Javohir') + ' (' + (o.agentPhone || '') + ')';
+    'ASORTI TRADE PLUS';
 
-  if (window.OrdersNative && typeof window.OrdersNative.shareToTelegram === 'function') {
-    window.OrdersNative.shareToTelegram(text, '');
-    showToast('Отправка через Telegram...');
-    return;
-  }
+  showToast('Подготовка файла ' + fmt.toUpperCase() + '...');
 
-  if (navigator.share && navigator.canShare) {
-    try {
-      const pdfBlob = await generatePdfBlob([o]);
-      const file = new File([pdfBlob], 'Накладная_№' + o.orderNumber + '.pdf', { type: 'application/pdf' });
+  try {
+    let blob;
+    let fileName;
+    let mimeType;
+
+    if (fmt === 'docx') {
+      blob = await generateDocxBlob([o]);
+      fileName = 'Накладная_№' + o.orderNumber + '.docx';
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else {
+      blob = await generatePdfBlob([o]);
+      fileName = 'Накладная_№' + o.orderNumber + '.pdf';
+      mimeType = 'application/pdf';
+    }
+
+    if (window.OrdersNative && typeof window.OrdersNative.shareFileToTelegram === 'function') {
+      const base64Data = await blobToBase64(blob);
+      window.OrdersNative.shareFileToTelegram(base64Data, fileName, mimeType, text);
+      showToast('Отправка файла в Telegram...');
+      return;
+    }
+
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: mimeType });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'Накладная №' + o.orderNumber,
           text: text,
           files: [file]
         });
-        showToast('Накладная отправлена!');
+        showToast('Файл успешно отправлен!');
         return;
       }
-    } catch (e) {}
-  }
+    }
 
-  const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
-  window.open(tgUrl, '_blank');
-  showToast('Открываем Telegram...');
+    if (window.saveAs) {
+      window.saveAs(blob, fileName);
+    } else {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+    const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+    window.open(tgUrl, '_blank');
+    showToast('Файл скачан и открыт Telegram');
+  } catch (err) {
+    console.error('Share error:', err);
+    alert('Ошибка отправки файла: ' + err.message);
+  }
 }
 
-async function shareBatchToTelegram() {
+async function shareBatchFileToTelegram(fmt) {
   const batchInput = document.getElementById('batchDateInput');
   const d = batchInput ? batchInput.value : '';
   if (!d) {
@@ -1406,31 +1442,58 @@ async function shareBatchToTelegram() {
   text += '\nОБЩАЯ СУММА ЗА ДЕНЬ: ' + formatPrice(totalSumAll) + ' сум\n' +
     'ASORTI TRADE PLUS';
 
-  if (window.OrdersNative && typeof window.OrdersNative.shareToTelegram === 'function') {
-    window.OrdersNative.shareToTelegram(text, '');
-    showToast('Отправка сборника в Telegram...');
-    return;
-  }
+  showToast('Подготовка сборника ' + fmt.toUpperCase() + '...');
 
-  if (navigator.share && navigator.canShare) {
-    try {
-      const pdfBlob = await generatePdfBlob(matchingOrders);
-      const file = new File([pdfBlob], 'Сборник_Заказов_' + d + '.pdf', { type: 'application/pdf' });
+  try {
+    let blob;
+    let fileName;
+    let mimeType;
+
+    if (fmt === 'docx') {
+      blob = await generateDocxBlob(matchingOrders);
+      fileName = 'Сборник_Заказов_' + d + '.docx';
+      mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    } else {
+      blob = await generatePdfBlob(matchingOrders);
+      fileName = 'Сборник_Заказов_' + d + '.pdf';
+      mimeType = 'application/pdf';
+    }
+
+    if (window.OrdersNative && typeof window.OrdersNative.shareFileToTelegram === 'function') {
+      const base64Data = await blobToBase64(blob);
+      window.OrdersNative.shareFileToTelegram(base64Data, fileName, mimeType, text);
+      showToast('Отправка сборника в Telegram...');
+      return;
+    }
+
+    if (navigator.share && navigator.canShare) {
+      const file = new File([blob], fileName, { type: mimeType });
       if (navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: 'Сборник заказов на ' + cisDate,
           text: text,
           files: [file]
         });
-        showToast('Сборник отправлен!');
+        showToast('Сборник успешно отправлен!');
         return;
       }
-    } catch (e) {}
-  }
+    }
 
-  const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
-  window.open(tgUrl, '_blank');
-  showToast('Открываем Telegram...');
+    if (window.saveAs) {
+      window.saveAs(blob, fileName);
+    } else {
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      link.click();
+    }
+    const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+    window.open(tgUrl, '_blank');
+    showToast('Сборник скачан и открыт Telegram');
+  } catch (err) {
+    console.error('Batch share error:', err);
+    alert('Ошибка отправки сборника: ' + err.message);
+  }
 }
 
 async function requestAppUpdate() {
@@ -1487,7 +1550,15 @@ function setupEventListeners() {
 
   document.getElementById('btnDownloadDocxAction').addEventListener('click', () => downloadCurrentOrder('docx'));
   document.getElementById('btnDownloadPdfAction').addEventListener('click', () => downloadCurrentOrder('pdf'));
-  document.getElementById('btnShareTelegramAction').addEventListener('click', shareOrderToTelegram);
+  
+  const btnShareDocx = document.getElementById('btnShareDocxTelegramAction');
+  if (btnShareDocx) {
+    btnShareDocx.addEventListener('click', () => shareOrderFileToTelegram('docx'));
+  }
+  const btnSharePdf = document.getElementById('btnSharePdfTelegramAction');
+  if (btnSharePdf) {
+    btnSharePdf.addEventListener('click', () => shareOrderFileToTelegram('pdf'));
+  }
 
   document.getElementById('btnDeleteModalOrder').addEventListener('click', () => {
     if (selectedOrder) deleteOrderById(selectedOrder.id);
@@ -1509,9 +1580,13 @@ function setupEventListeners() {
   if (btnPdf) {
     btnPdf.addEventListener('click', () => downloadBatchOrders('pdf'));
   }
-  const btnBatchTg = document.getElementById('btnBatchTelegram');
-  if (btnBatchTg) {
-    btnBatchTg.addEventListener('click', shareBatchToTelegram);
+  const btnBatchDocxTg = document.getElementById('btnBatchDocxTelegram');
+  if (btnBatchDocxTg) {
+    btnBatchDocxTg.addEventListener('click', () => shareBatchFileToTelegram('docx'));
+  }
+  const btnBatchPdfTg = document.getElementById('btnBatchPdfTelegram');
+  if (btnBatchPdfTg) {
+    btnBatchPdfTg.addEventListener('click', () => shareBatchFileToTelegram('pdf'));
   }
 
   const btnUpdateDesk = document.getElementById('btnCheckUpdatesDesktop');
