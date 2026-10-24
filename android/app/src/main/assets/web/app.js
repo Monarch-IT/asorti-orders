@@ -73,6 +73,8 @@ function mapToDb(payload, customId) {
     order_number: payload.orderNumber,
     delivery_date: payload.deliveryDate,
     store_name: payload.storeName,
+    owner_name: payload.ownerName || '',
+    owner_phone: payload.ownerPhone || '',
     address: payload.address,
     coords: payload.coords,
     agent_name: payload.agentName || 'Javohir',
@@ -90,6 +92,8 @@ function mapFromDb(row) {
     orderNumber: row.order_number,
     deliveryDate: row.delivery_date,
     storeName: row.store_name,
+    ownerName: row.owner_name || '',
+    ownerPhone: row.owner_phone || '',
     address: row.address,
     coords: row.coords,
     agentName: row.agent_name,
@@ -295,7 +299,7 @@ async function reverseGeocode(lat, lon) {
       if (geoObj) {
         addressFound = geoObj.metaDataProperty?.GeocoderMetaData?.text || geoObj.name || '';
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (!addressFound) {
@@ -314,7 +318,7 @@ async function reverseGeocode(lat, lon) {
       if (!addressFound && data && data.display_name) {
         addressFound = data.display_name;
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   if (!addressFound) {
@@ -322,7 +326,7 @@ async function reverseGeocode(lat, lon) {
       const res = await fetch('/api/geocode?lat=' + lat + '&lon=' + lon);
       const data = await res.json();
       addressFound = data.address || '';
-    } catch (e) {}
+    } catch (e) { }
   }
 
   currentAddress = addressFound || ('Координаты: ' + Number(lat).toFixed(6) + ', ' + Number(lon).toFixed(6));
@@ -504,7 +508,7 @@ function initGeolocation() {
         applyLocationUi(lat, lon, currentAddress, true);
         return;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const lat = 41.3111;
     const lon = 69.2797;
@@ -544,8 +548,8 @@ function filterAndRenderProducts() {
 
   filteredProducts = allProducts.filter(p => {
     const matchCat = (currentCategory === 'ALL') || (p.category === currentCategory);
-    const matchSearch = !query || 
-      p.fullName.toLowerCase().includes(query) || 
+    const matchSearch = !query ||
+      p.fullName.toLowerCase().includes(query) ||
       p.brand.toLowerCase().includes(query) ||
       p.category.toLowerCase().includes(query);
     return matchCat && matchSearch;
@@ -567,24 +571,24 @@ function renderProductList() {
 
     return '<div class="product-row-item">' +
       '<div class="item-left">' +
-        '<span class="item-category-tag">' + p.category.split(' ')[0] + '</span>' +
-        '<div class="item-title">' + p.fullName + '</div>' +
-        '<div class="item-meta">' + (p.volume || '') + ' ' + (p.note ? '• ' + p.note : '') + '</div>' +
-        '<div class="item-price">' + formatPrice(p.price) + ' сум</div>' +
+      '<span class="item-category-tag">' + p.category.split(' ')[0] + '</span>' +
+      '<div class="item-title">' + p.fullName + '</div>' +
+      '<div class="item-meta">' + (p.volume || '') + ' ' + (p.note ? '• ' + p.note : '') + '</div>' +
+      '<div class="item-price">' + formatPrice(p.price) + ' сум</div>' +
       '</div>' +
       '<div class="item-stepper">' +
-        (count === 0 ? 
-          '<button type="button" class="btn-step add-first" onclick="addToCartDirect(' + p.id + ')">&plus; Выбрать</button>' : 
-          '<button type="button" class="btn-step" onclick="updateItemCount(' + p.id + ', -1)">&minus;</button>' +
-          '<input type="number" min="1" class="step-input" value="' + count + '" onchange="setItemCountDirect(' + p.id + ', this.value)">' +
-          '<button type="button" class="btn-step" onclick="updateItemCount(' + p.id + ', 1)">&plus;</button>'
-        ) +
+      (count === 0 ?
+        '<button type="button" class="btn-step add-first" onclick="addToCartDirect(' + p.id + ')">&plus; Выбрать</button>' :
+        '<button type="button" class="btn-step" onclick="updateItemCount(' + p.id + ', -1)">&minus;</button>' +
+        '<input type="number" min="1" class="step-input" value="' + count + '" onchange="setItemCountDirect(' + p.id + ', this.value)">' +
+        '<button type="button" class="btn-step" onclick="updateItemCount(' + p.id + ', 1)">&plus;</button>'
+      ) +
       '</div>' +
-    '</div>';
+      '</div>';
   }).join('');
 }
 
-window.addToCartDirect = function(productId) {
+window.addToCartDirect = function (productId) {
   const p = allProducts.find(x => x.id === productId);
   if (!p) return;
   cart.push({ product: p, quantity: 1 });
@@ -593,7 +597,7 @@ window.addToCartDirect = function(productId) {
   showToast('+1 ' + p.brand);
 };
 
-window.setItemCountDirect = function(productId, val) {
+window.setItemCountDirect = function (productId, val) {
   const parsed = parseInt(val, 10);
   if (isNaN(parsed) || parsed <= 0) {
     removeFromCart(productId);
@@ -607,7 +611,7 @@ window.setItemCountDirect = function(productId, val) {
   }
 };
 
-window.updateItemCount = function(productId, delta) {
+window.updateItemCount = function (productId, delta) {
   const item = cart.find(c => c.product.id === productId);
   if (!item) return;
 
@@ -619,7 +623,7 @@ window.updateItemCount = function(productId, delta) {
   renderProductList();
 };
 
-window.removeFromCart = function(productId) {
+window.removeFromCart = function (productId) {
   cart = cart.filter(c => c.product.id !== productId);
   updateCartUi();
   renderProductList();
@@ -645,17 +649,17 @@ function updateCartUi() {
   wordsEl.innerText = 'Сумма прописью: ' + numberToWordsRu(total);
 
   if (trayContainer) {
-    trayContainer.innerHTML = cart.map(i => 
+    trayContainer.innerHTML = cart.map(i =>
       '<div class="cart-tray-row">' +
-        '<div class="cart-tray-name">' +
-          '<div>' + i.product.fullName + '</div>' +
-          '<div class="cart-tray-sub">' + formatPrice(i.product.price) + ' сум/шт</div>' +
-        '</div>' +
-        '<div class="cart-tray-ctrls">' +
-          '<input type="number" min="1" class="cart-tray-qty-input" value="' + i.quantity + '" onchange="setItemCountDirect(' + i.product.id + ', this.value)">' +
-          '<div class="cart-tray-price">' + formatPrice(i.quantity * i.product.price) + ' сум</div>' +
-          '<button type="button" class="btn-remove-tray" title="Убрать из заказа" onclick="removeFromCart(' + i.product.id + ')">&times;</button>' +
-        '</div>' +
+      '<div class="cart-tray-name">' +
+      '<div>' + i.product.fullName + '</div>' +
+      '<div class="cart-tray-sub">' + formatPrice(i.product.price) + ' сум/шт</div>' +
+      '</div>' +
+      '<div class="cart-tray-ctrls">' +
+      '<input type="number" min="1" class="cart-tray-qty-input" value="' + i.quantity + '" onchange="setItemCountDirect(' + i.product.id + ', this.value)">' +
+      '<div class="cart-tray-price">' + formatPrice(i.quantity * i.product.price) + ' сум</div>' +
+      '<button type="button" class="btn-remove-tray" title="Убрать из заказа" onclick="removeFromCart(' + i.product.id + ')">&times;</button>' +
+      '</div>' +
       '</div>'
     ).join('');
   }
@@ -663,6 +667,8 @@ function updateCartUi() {
 
 async function submitOrder() {
   const storeName = document.getElementById('storeNameInput').value.trim();
+  const ownerName = (document.getElementById('ownerNameInput')?.value || '').trim();
+  const ownerPhone = (document.getElementById('ownerPhoneInput')?.value || '').trim();
   const deliveryDate = document.getElementById('deliveryDateInput').value;
   const manualAddress = document.getElementById('manualAddressInput').value.trim();
 
@@ -689,6 +695,7 @@ async function submitOrder() {
     fullName: i.product.fullName,
     volume: i.product.volume || '-',
     price: Number(i.product.price) || 0,
+    costPrice: Number(i.product.costPrice) || 0,
     quantity: Number(i.quantity) || 1
   }));
 
@@ -699,6 +706,8 @@ async function submitOrder() {
     orderNumber: orderNumber,
     deliveryDate: deliveryDate,
     storeName: storeName,
+    ownerName: ownerName,
+    ownerPhone: ownerPhone,
     address: chosenAddress,
     coords: currentCoords,
     agentName: 'Javohir',
@@ -741,6 +750,10 @@ async function submitOrder() {
 
     cart = [];
     document.getElementById('storeNameInput').value = '';
+    const ownerNameEl = document.getElementById('ownerNameInput');
+    if (ownerNameEl) ownerNameEl.value = '';
+    const ownerPhoneEl = document.getElementById('ownerPhoneInput');
+    if (ownerPhoneEl) ownerPhoneEl.value = '';
     updateCartUi();
     renderProductList();
     openOrderModal(newOrder);
@@ -851,30 +864,30 @@ function createOrderCardHtml(order) {
 
   return '<div class="order-card">' +
     '<div class="order-card-header">' +
-      '<div class="order-num">№ ' + order.orderNumber + '</div>' +
-      '<div class="order-date-tag">' + cisFormatted + '</div>' +
+    '<div class="order-num">№ ' + order.orderNumber + '</div>' +
+    '<div class="order-date-tag">' + cisFormatted + '</div>' +
     '</div>' +
     '<div class="order-store-title">' + order.storeName + '</div>' +
     '<div class="order-address-text">' + (order.address || 'г. Ташкент') + '</div>' +
     '<div class="order-card-footer">' +
-      '<div>' +
-        '<div class="order-amount">' + formatPrice(order.totalAmount) + ' сум</div>' +
-        '<span class="badge-status ' + badgeClass + '">' + badgeText + '</span>' +
-      '</div>' +
-      '<div class="order-actions-row">' +
-        '<button type="button" class="btn-order-open" onclick="openOrderModalById(\'' + order.id + '\')">Открыть</button>' +
-        '<button type="button" class="btn-order-delete" onclick="deleteOrderById(\'' + order.id + '\', event)">Удалить</button>' +
-      '</div>' +
+    '<div>' +
+    '<div class="order-amount">' + formatPrice(order.totalAmount) + ' сум</div>' +
+    '<span class="badge-status ' + badgeClass + '">' + badgeText + '</span>' +
     '</div>' +
-  '</div>';
+    '<div class="order-actions-row">' +
+    '<button type="button" class="btn-order-open" onclick="openOrderModalById(\'' + order.id + '\')">Открыть</button>' +
+    '<button type="button" class="btn-order-delete" onclick="deleteOrderById(\'' + order.id + '\', event)">Удалить</button>' +
+    '</div>' +
+    '</div>' +
+    '</div>';
 }
 
-window.openOrderModalById = function(orderId) {
+window.openOrderModalById = function (orderId) {
   const o = allOrders.find(x => x.id === orderId);
   if (o) openOrderModal(o);
 };
 
-window.deleteOrderById = async function(orderId, evt) {
+window.deleteOrderById = async function (orderId, evt) {
   if (evt) evt.stopPropagation();
   if (!confirm('Вы уверены, что хотите удалить этот накладной лист?')) return;
 
@@ -912,6 +925,15 @@ function openOrderModal(order) {
   document.getElementById('modalOrderNumber').innerText = 'Накладная № ' + order.orderNumber;
   document.getElementById('modalOrderDate').innerText = 'Дата доставки: ' + cisFormatted;
   document.getElementById('modalStoreName').innerText = order.storeName;
+  const ownerInfoEl = document.getElementById('modalOwnerInfo');
+  if (ownerInfoEl) {
+    if (order.ownerName || order.ownerPhone) {
+      ownerInfoEl.style.display = 'block';
+      ownerInfoEl.innerText = 'Владелец: ' + (order.ownerName || 'Не указан') + (order.ownerPhone ? ' (' + order.ownerPhone + ')' : '');
+    } else {
+      ownerInfoEl.style.display = 'none';
+    }
+  }
   document.getElementById('modalLocationText').innerText = order.address || 'г. Ташкент';
   document.getElementById('modalTotalSum').innerText = formatPrice(order.totalAmount) + ' сум';
 
@@ -927,16 +949,16 @@ function openOrderModal(order) {
   }
 
   const itemsContainer = document.getElementById('modalItemsList');
-  itemsContainer.innerHTML = (order.items || []).map(i => 
+  itemsContainer.innerHTML = (order.items || []).map(i =>
     '<div style="display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px dashed #e2e8f0;">' +
-      '<div>' +
-        '<b>' + i.fullName + '</b>' +
-        '<span style="color: var(--text-muted); font-size: 11px;"> (' + (i.volume || '-') + ')</span>' +
-      '</div>' +
-      '<div style="text-align: right;">' +
-        '<div>' + i.quantity + ' шт &times; ' + formatPrice(i.price) + '</div>' +
-        '<b style="color: var(--primary-navy);">' + formatPrice(i.quantity * i.price) + ' сум</b>' +
-      '</div>' +
+    '<div>' +
+    '<b>' + i.fullName + '</b>' +
+    '<span style="color: var(--text-muted); font-size: 11px;"> (' + (i.volume || '-') + ')</span>' +
+    '</div>' +
+    '<div style="text-align: right;">' +
+    '<div>' + i.quantity + ' шт &times; ' + formatPrice(i.price) + '</div>' +
+    '<b style="color: var(--primary-navy);">' + formatPrice(i.quantity * i.price) + ' сум</b>' +
+    '</div>' +
     '</div>'
   ).join('');
 
@@ -989,6 +1011,9 @@ function buildSingleTableXml(order) {
   const orderNumber = sanitizeXml(order.orderNumber || '000001');
   const deliveryDate = order.deliveryDate ? order.deliveryDate.split('-').reverse().join('/') : '00/00/0000';
   const clientName = sanitizeXml(order.storeName || 'Магазин');
+  const ownerText = (order.ownerName || order.ownerPhone)
+    ? sanitizeXml('Владелец: ' + (order.ownerName || '-') + (order.ownerPhone ? ' (' + order.ownerPhone + ')' : ''))
+    : '';
   const address = sanitizeXml(order.address || 'г. Ташкент');
   const agentName = sanitizeXml(order.agentName || 'Javohir');
   const agentPhone = sanitizeXml(order.agentPhone || '77 030 32 52');
@@ -1010,67 +1035,68 @@ function buildSingleTableXml(order) {
       '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + qty + '</w:t></w:r></w:p></w:tc>' +
       '<w:tc><w:tcPr><w:tcW w:w="1600" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>' + price + '</w:t></w:r></w:p></w:tc>' +
       '<w:tc><w:tcPr><w:tcW w:w="1800" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + sum + '</w:t></w:r></w:p></w:tc>' +
-    '</w:tr>';
+      '</w:tr>';
   });
 
   return '<w:tbl>' +
     '<w:tblPr>' +
-      '<w:tblW w:w="10200" w:type="dxa"/>' +
-      '<w:tblBorders>' +
-        '<w:top w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
-        '<w:left w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
-        '<w:bottom w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
-        '<w:right w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
-        '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
-        '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
-      '</w:tblBorders>' +
-      '<w:jc w:val="center"/>' +
+    '<w:tblW w:w="10200" w:type="dxa"/>' +
+    '<w:tblBorders>' +
+    '<w:top w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
+    '<w:left w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
+    '<w:bottom w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
+    '<w:right w:val="single" w:sz="8" w:space="0" w:color="003366"/>' +
+    '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
+    '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
+    '</w:tblBorders>' +
+    '<w:jc w:val="center"/>' +
     '</w:tblPr>' +
     '<w:tr>' +
-      '<w:tc>' +
-        '<w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
-        '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="24"/></w:rPr><w:t>НАКЛАДНОЙ ЛИСТ № ' + orderNumber + '</w:t></w:r></w:p>' +
-      '</w:tc>' +
-      '<w:tc>' +
-        '<w:tcPr><w:tcW w:w="2600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
-        '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>Дата: ' + deliveryDate + '</w:t></w:r></w:p>' +
-      '</w:tc>' +
-      '<w:tc>' +
-        '<w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="2600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
-        '<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>ASORTI TRADE PLUS</w:t></w:r></w:p>' +
-      '</w:tc>' +
+    '<w:tc>' +
+    '<w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
+    '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="24"/></w:rPr><w:t>НАКЛАДНОЙ ЛИСТ № ' + orderNumber + '</w:t></w:r></w:p>' +
+    '</w:tc>' +
+    '<w:tc>' +
+    '<w:tcPr><w:tcW w:w="2600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
+    '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>Дата: ' + deliveryDate + '</w:t></w:r></w:p>' +
+    '</w:tc>' +
+    '<w:tc>' +
+    '<w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="2600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="003366"/></w:tcPr>' +
+    '<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>ASORTI TRADE PLUS</w:t></w:r></w:p>' +
+    '</w:tc>' +
     '</w:tr>' +
     '<w:tr>' +
-      '<w:tc>' +
-        '<w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОТПРАВИТЕЛЬ:</w:t></w:r></w:p>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="003366"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + ' (' + agentPhone + ')</w:t></w:r></w:p>' +
-      '</w:tc>' +
-      '<w:tc>' +
-        '<w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="5200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ПОЛУЧАТЕЛЬ (МАГАЗИН):</w:t></w:r></w:p>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/><w:color w:val="111827"/></w:rPr><w:t>' + clientName + '</w:t></w:r></w:p>' +
-        '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Адрес: </w:t></w:r><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>' + address + '</w:t></w:r></w:p>' +
-      '</w:tc>' +
+    '<w:tc>' +
+    '<w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОТПРАВИТЕЛЬ:</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="003366"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + ' (' + agentPhone + ')</w:t></w:r></w:p>' +
+    '</w:tc>' +
+    '<w:tc>' +
+    '<w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="5200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ПОЛУЧАТЕЛЬ (МАГАЗИН):</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/><w:color w:val="111827"/></w:rPr><w:t>' + clientName + '</w:t></w:r></w:p>' +
+    (ownerText ? '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="0066CC"/></w:rPr><w:t>' + ownerText + '</w:t></w:r></w:p>' : '') +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Адрес: </w:t></w:r><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>' + address + '</w:t></w:r></w:p>' +
+    '</w:tc>' +
     '</w:tr>' +
     '<w:tr>' +
-      '<w:tc><w:tcPr><w:tcW w:w="4200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>НАИМЕНОВАНИЕ ТОВАРА</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:tcW w:w="1400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ОБЪЁМ</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>КОЛ-ВО</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:tcW w:w="1600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ЦЕНА (СУМ)</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:tcW w:w="1800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>СУММА (СУМ)</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:tcW w:w="4200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>НАИМЕНОВАНИЕ ТОВАРА</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:tcW w:w="1400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ОБЪЁМ</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>КОЛ-ВО</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:tcW w:w="1600" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ЦЕНА (СУМ)</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:tcW w:w="1800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="E2E8F0"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>СУММА (СУМ)</w:t></w:r></w:p></w:tc>' +
     '</w:tr>' +
     rowsXml +
     '<w:tr>' +
-      '<w:tc><w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="6800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ИТОГО К ОПЛАТЕ: </w:t></w:r><w:r><w:rPr><w:i/><w:sz w:val="18"/></w:rPr><w:t>' + totalInWords + '</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="003366"/><w:sz w:val="22"/></w:rPr><w:t>' + totalFormatted + ' сум</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="6800" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F8FAFC"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>ИТОГО К ОПЛАТЕ: </w:t></w:r><w:r><w:rPr><w:i/><w:sz w:val="18"/></w:rPr><w:t>' + totalInWords + '</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="003366"/><w:sz w:val="22"/></w:rPr><w:t>' + totalFormatted + ' сум</w:t></w:r></w:p></w:tc>' +
     '</w:tr>' +
     '<w:tr>' +
-      '<w:tc><w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="6800" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="16"/><w:color w:val="666666"/></w:rPr><w:t>Отпустил (экспедитор/склад): ____________________ (Подпись)</w:t></w:r></w:p></w:tc>' +
-      '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="3400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="16"/><w:color w:val="666666"/></w:rPr><w:t>Принял покупатель: _________________ (Подпись)</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="6800" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="16"/><w:color w:val="666666"/></w:rPr><w:t>Отпустил (экспедитор/склад): ____________________ (Подпись)</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="3400" w:type="dxa"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="16"/><w:color w:val="666666"/></w:rPr><w:t>Принял покупатель: _________________ (Подпись)</w:t></w:r></w:p></w:tc>' +
     '</w:tr>' +
-  '</w:tbl>';
+    '</w:tbl>';
 }
 
 async function generateDocxBlob(orders) {
@@ -1095,13 +1121,13 @@ async function generateDocxBlob(orders) {
 
   const bodyXml = '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
     '<w:body>' +
-      combinedTablesXml +
-      '<w:sectPr>' +
-        '<w:pgSz w:w="11906" w:h="16838"/>' +
-        '<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="720" w:footer="720" w:gutter="0"/>' +
-      '</w:sectPr>' +
+    combinedTablesXml +
+    '<w:sectPr>' +
+    '<w:pgSz w:w="11906" w:h="16838"/>' +
+    '<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="720" w:footer="720" w:gutter="0"/>' +
+    '</w:sectPr>' +
     '</w:body>' +
-  '</w:document>';
+    '</w:document>';
 
   zip.file('word/document.xml', bodyXml);
   return await zip.generateAsync({ type: 'blob' });
@@ -1118,7 +1144,7 @@ function buildPdfMakeDocDefinition(orders) {
 
     function createCopySection(copyTitle) {
       const cisDate = order.deliveryDate ? order.deliveryDate.split('-').reverse().join('.') : '-';
-      
+
       const itemRows = [
         [
           { text: 'НАИМЕНОВАНИЕ', style: 'tableHeader', alignment: 'left' },
@@ -1172,6 +1198,7 @@ function buildPdfMakeDocDefinition(orders) {
               fontSize: 8.5,
               stack: [
                 { text: [{ text: 'ПОЛУЧАТЕЛЬ: ', bold: true }, order.storeName] },
+                (order.ownerName || order.ownerPhone ? { text: [{ text: 'ВЛАДЕЛЕЦ: ', bold: true, color: '#0066CC' }, (order.ownerName || '-') + (order.ownerPhone ? ' (' + order.ownerPhone + ')' : '')] } : ''),
                 { text: [{ text: 'АДРЕС: ', bold: true }, order.address || 'г. Ташкент'] }
               ]
             }
@@ -1184,11 +1211,11 @@ function buildPdfMakeDocDefinition(orders) {
             body: itemRows
           },
           layout: {
-            fillColor: function(rowIndex) {
+            fillColor: function (rowIndex) {
               return rowIndex === 0 ? '#E2E8F0' : null;
             },
-            hLineColor: function() { return '#CBD5E1'; },
-            vLineColor: function() { return '#CBD5E1'; }
+            hLineColor: function () { return '#CBD5E1'; },
+            vLineColor: function () { return '#CBD5E1'; }
           }
         },
         {
@@ -1339,12 +1366,13 @@ async function shareOrderFileToTelegram(fmt) {
   const o = selectedOrder;
   const cisFormatted = o.deliveryDate ? o.deliveryDate.split('-').reverse().join('.') : '-';
 
-  const itemsText = (o.items || []).map((it, idx) => 
+  const itemsText = (o.items || []).map((it, idx) =>
     (idx + 1) + '. ' + it.fullName + ' — ' + it.quantity + ' шт x ' + formatPrice(it.price) + ' = ' + formatPrice(it.quantity * it.price) + ' сум'
   ).join('\n');
 
   let text = 'НАКЛАДНАЯ № ' + o.orderNumber + '\n' +
     'Магазин: ' + o.storeName + '\n' +
+    (o.ownerName || o.ownerPhone ? 'Владелец: ' + (o.ownerName || '-') + (o.ownerPhone ? ' (' + o.ownerPhone + ')' : '') + '\n' : '') +
     'Дата: ' + cisFormatted + '\n' +
     'Адрес: ' + (o.address || 'г. Ташкент') + '\n';
 
@@ -1432,6 +1460,7 @@ async function shareBatchFileToTelegram(fmt) {
 
   matchingOrders.forEach((o, idx) => {
     text += (idx + 1) + '. №' + o.orderNumber + ' — ' + o.storeName + '\n' +
+      (o.ownerName || o.ownerPhone ? '   Владелец: ' + (o.ownerName || '-') + (o.ownerPhone ? ' (' + o.ownerPhone + ')' : '') + '\n' : '') +
       '   Адрес: ' + (o.address || 'г. Ташкент') + '\n' +
       '   Сумма: ' + formatPrice(o.totalAmount) + ' сум\n';
     if (o.coords && o.coords.lat) {
@@ -1560,6 +1589,15 @@ function setupEventListeners() {
     btnSharePdf.addEventListener('click', () => shareOrderFileToTelegram('pdf'));
   }
 
+  const btnCostDocx = document.getElementById('btnDownloadCostDocxAction');
+  if (btnCostDocx) {
+    btnCostDocx.addEventListener('click', downloadOrderCostDocx);
+  }
+  const btnCostTg = document.getElementById('btnShareCostTelegramAction');
+  if (btnCostTg) {
+    btnCostTg.addEventListener('click', shareOrderCostToTelegram);
+  }
+
   document.getElementById('btnDeleteModalOrder').addEventListener('click', () => {
     if (selectedOrder) deleteOrderById(selectedOrder.id);
   });
@@ -1588,6 +1626,14 @@ function setupEventListeners() {
   if (btnBatchPdfTg) {
     btnBatchPdfTg.addEventListener('click', () => shareBatchFileToTelegram('pdf'));
   }
+  const btnBatchCostDocxBtn = document.getElementById('btnBatchCostDocx');
+  if (btnBatchCostDocxBtn) {
+    btnBatchCostDocxBtn.addEventListener('click', downloadBatchCostDocx);
+  }
+  const btnBatchCostTgBtn = document.getElementById('btnBatchCostTelegram');
+  if (btnBatchCostTgBtn) {
+    btnBatchCostTgBtn.addEventListener('click', shareBatchCostToTelegram);
+  }
 
   const btnUpdateDesk = document.getElementById('btnCheckUpdatesDesktop');
   if (btnUpdateDesk) {
@@ -1598,3 +1644,384 @@ function setupEventListeners() {
     btnUpdateMob.addEventListener('click', requestAppUpdate);
   }
 }
+
+function buildSingleCostTableXml(order) {
+    const orderNumber = sanitizeXml(order.orderNumber || '000001');
+    const deliveryDate = order.deliveryDate ? order.deliveryDate.split('-').reverse().join('/') : '00/00/0000';
+    const clientName = sanitizeXml(order.storeName || 'Магазин');
+    const ownerText = (order.ownerName || order.ownerPhone)
+      ? sanitizeXml('Владелец: ' + (order.ownerName || '-') + (order.ownerPhone ? ' (' + order.ownerPhone + ')' : ''))
+      : '';
+    const address = sanitizeXml(order.address || 'г. Ташкент');
+    const agentName = sanitizeXml(order.agentName || 'Javohir');
+    const agentPhone = sanitizeXml(order.agentPhone || '77 030 32 52');
+
+    let totalSelling = 0;
+    let totalCost = 0;
+    let rowsXml = '';
+
+    (order.items || []).forEach(item => {
+      const name = sanitizeXml(item.fullName || item.name || '');
+      const vol = sanitizeXml(item.volume || '-');
+      const qty = Number(item.quantity) || 1;
+      const sellPrice = Number(item.price) || 0;
+
+      let costPrice = Number(item.costPrice);
+      if (!costPrice || isNaN(costPrice)) {
+        const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
+        costPrice = found ? Number(found.costPrice) || 0 : 0;
+      }
+
+      const sellSum = qty * sellPrice;
+      const costSum = qty * costPrice;
+      const marginSum = sellSum - costSum;
+
+      totalSelling += sellSum;
+      totalCost += costSum;
+
+      rowsXml += '<w:tr>' +
+        '<w:tc><w:tcPr><w:tcW w:w="3400" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>' + name + '</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="1000" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>' + vol + '</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="900" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + qty + ' шт</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/></w:rPr><w:t>' + formatPrice(sellPrice) + '</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/><w:color w:val="15803D"/></w:rPr><w:t>' + formatPrice(costPrice) + '</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="15803D"/></w:rPr><w:t>' + formatPrice(costSum) + '</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="1300" w:type="dxa"/><w:tcBorders><w:top w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:bottom w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:left w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/><w:right w:val="single" w:sz="4" w:space="0" w:color="CCCCCC"/></w:tcBorders></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="003366"/></w:rPr><w:t>+' + formatPrice(marginSum) + '</w:t></w:r></w:p></w:tc>' +
+        '</w:tr>';
+    });
+
+    const totalMargin = totalSelling - totalCost;
+
+    return '<w:tbl>' +
+      '<w:tblPr>' +
+      '<w:tblW w:w="10200" w:type="dxa"/>' +
+      '<w:tblBorders>' +
+      '<w:top w:val="single" w:sz="8" w:space="0" w:color="166534"/>' +
+      '<w:left w:val="single" w:sz="8" w:space="0" w:color="166534"/>' +
+      '<w:bottom w:val="single" w:sz="8" w:space="0" w:color="166534"/>' +
+      '<w:right w:val="single" w:sz="8" w:space="0" w:color="166534"/>' +
+      '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
+      '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="E0E0E0"/>' +
+      '</w:tblBorders>' +
+      '<w:jc w:val="center"/>' +
+      '</w:tblPr>' +
+      '<w:tr>' +
+      '<w:tc>' +
+      '<w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="5300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="166534"/></w:tcPr>' +
+      '<w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="22"/></w:rPr><w:t>ОТЧЁТ ПО СЕБЕСТОИМОСТИ № ' + orderNumber + '</w:t></w:r></w:p>' +
+      '</w:tc>' +
+      '<w:tc>' +
+      '<w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="2400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="166534"/></w:tcPr>' +
+      '<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>Дата: ' + deliveryDate + '</w:t></w:r></w:p>' +
+      '</w:tc>' +
+      '<w:tc>' +
+      '<w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="2500" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="166534"/></w:tcPr>' +
+      '<w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:color w:val="FFFFFF"/><w:sz w:val="20"/></w:rPr><w:t>ASORTI TRADE PLUS</w:t></w:r></w:p>' +
+      '</w:tc>' +
+      '</w:tr>' +
+      '<w:tr>' +
+      '<w:tc>' +
+      '<w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="5300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr>' +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОРГАНИЗАЦИЯ / АГЕНТ:</w:t></w:r></w:p>' +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="166534"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>' +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + ' (' + agentPhone + ')</w:t></w:r></w:p>' +
+      '</w:tc>' +
+      '<w:tc>' +
+      '<w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="4900" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr>' +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ТОЧКА СБЫТА (МАГАЗИН):</w:t></w:r></w:p>' +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="22"/><w:color w:val="111827"/></w:rPr><w:t>' + clientName + '</w:t></w:r></w:p>' +
+      (ownerText ? '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="18"/><w:color w:val="166534"/></w:rPr><w:t>' + ownerText + '</w:t></w:r></w:p>' : '') +
+      '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Адрес: </w:t></w:r><w:r><w:rPr><w:sz w:val="18"/></w:rPr><w:t>' + address + '</w:t></w:r></w:p>' +
+      '</w:tc>' +
+      '</w:tr>' +
+      '<w:tr>' +
+      '<w:tc><w:tcPr><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="left"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>ТОВАР</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="1000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>ОБЪЁМ</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="900" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>КОЛ-ВО</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>ПРОДАЖА</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>СЕБЕСТ.</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="1200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>СУММА СЕБ.</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:tcW w:w="1300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="16"/><w:color w:val="166534"/></w:rPr><w:t>МАРЖА</w:t></w:r></w:p></w:tc>' +
+      '</w:tr>' +
+      rowsXml +
+      '<w:tr>' +
+      '<w:tc><w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="5300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr><w:p><w:r><w:rPr><w:b/><w:sz w:val="18"/><w:color w:val="166534"/></w:rPr><w:t>ИТОГИ ПО ЗАКАЗУ: </w:t></w:r><w:r><w:rPr><w:i/><w:sz w:val="18"/></w:rPr><w:t>Сумма реализации: ' + formatPrice(totalSelling) + ' сум</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="2400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="15803D"/><w:sz w:val="18"/></w:rPr><w:t>Себест.: ' + formatPrice(totalCost) + ' сум</w:t></w:r></w:p></w:tc>' +
+      '<w:tc><w:tcPr><w:gridSpan w:val="2"/><w:tcW w:w="2500" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val="166534"/><w:sz w:val="20"/></w:rPr><w:t>Маржа: +' + formatPrice(totalMargin) + ' сум</w:t></w:r></w:p></w:tc>' +
+      '</w:tr>' +
+      '</w:tbl>';
+  }
+
+  async function generateCostDocxBlob(orders) {
+    if (!Array.isArray(orders)) orders = [orders];
+    if (!window.JSZip || !window.TEMPLATE_DOCX_B64) {
+      throw new Error('JSZip or template not loaded');
+    }
+
+    const zip = await window.JSZip.loadAsync(window.TEMPLATE_DOCX_B64, { base64: true });
+    let combinedTablesXml = '';
+
+    let grandSelling = 0;
+    let grandCost = 0;
+
+    orders.forEach((order, idx) => {
+      (order.items || []).forEach(item => {
+        const qty = Number(item.quantity) || 1;
+        const sellPrice = Number(item.price) || 0;
+        let costPrice = Number(item.costPrice);
+        if (!costPrice || isNaN(costPrice)) {
+          const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
+          costPrice = found ? Number(found.costPrice) || 0 : 0;
+        }
+        grandSelling += (qty * sellPrice);
+        grandCost += (qty * costPrice);
+      });
+
+      combinedTablesXml += buildSingleCostTableXml(order);
+      if (idx < orders.length - 1) {
+        combinedTablesXml += '<w:p><w:pPr><w:jc w:val="center"/><w:pBdr><w:bottom w:val="dashed" w:sz="6" w:space="4" w:color="166534"/></w:pBdr></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:i/><w:sz w:val="16"/><w:color w:val="888888"/></w:rPr><w:t></w:t></w:r></w:p>';
+        combinedTablesXml += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+      }
+    });
+
+    if (orders.length > 1) {
+      const grandMargin = grandSelling - grandCost;
+      combinedTablesXml += '<w:p><w:pPr><w:spacing w:before="240" w:after="120"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="166534"/></w:rPr><w:t>ИТОГОВЫЙ СВОД ПО СЕБЕСТОИМОСТИ ЗА ДЕНЬ (' + orders.length + ' НАКЛАДНЫХ):</w:t></w:r></w:p>';
+      combinedTablesXml += '<w:tbl>' +
+        '<w:tblPr><w:tblW w:w="10200" w:type="dxa"/><w:jc w:val="center"/><w:tblBorders><w:top w:val="single" w:sz="6" w:space="0" w:color="166534"/><w:bottom w:val="single" w:sz="6" w:space="0" w:color="166534"/><w:left w:val="none"/><w:right w:val="none"/><w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/><w:insideV w:val="none"/></w:tblBorders></w:tblPr>' +
+        '<w:tr>' +
+        '<w:tc><w:tcPr><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="666666"/></w:rPr><w:t>ОБЩАЯ РЕАЛИЗАЦИЯ (ПРОДАЖА):</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="003366"/></w:rPr><w:t>' + formatPrice(grandSelling) + ' сум</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="666666"/></w:rPr><w:t>ОБЩАЯ СЕБЕСТОИМОСТЬ:</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:sz w:val="24"/><w:color w:val="15803D"/></w:rPr><w:t>' + formatPrice(grandCost) + ' сум</w:t></w:r></w:p></w:tc>' +
+        '<w:tc><w:tcPr><w:tcW w:w="3400" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="DCFCE7"/></w:tcPr><w:p><w:r><w:rPr><w:sz w:val="18"/><w:color w:val="166534"/></w:rPr><w:t>ВАЛОВАЯ МАРЖА (ПРИБЫЛЬ):</w:t></w:r></w:p><w:p><w:r><w:rPr><w:b/><w:sz w:val="26"/><w:color w:val="166534"/></w:rPr><w:t>+' + formatPrice(grandMargin) + ' сум</w:t></w:r></w:p></w:tc>' +
+        '</w:tr>' +
+        '</w:tbl>';
+    }
+
+    const bodyXml = '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+      '<w:body>' +
+      combinedTablesXml +
+      '<w:sectPr>' +
+      '<w:pgSz w:w="11906" w:h="16838"/>' +
+      '<w:pgMar w:top="720" w:right="720" w:bottom="720" w:left="720" w:header="720" w:footer="720" w:gutter="0"/>' +
+      '</w:sectPr>' +
+      '</w:body>' +
+      '</w:document>';
+
+    zip.file('word/document.xml', bodyXml);
+    return await zip.generateAsync({ type: 'blob' });
+  }
+
+  async function downloadOrderCostDocx() {
+    if (!selectedOrder) return;
+    showToast('Формирование отчёта себестоимости...');
+    try {
+      const blob = await generateCostDocxBlob([selectedOrder]);
+      const fileName = 'Себестоимость_№' + selectedOrder.orderNumber + '.docx';
+      if (window.saveAs) {
+        window.saveAs(blob, fileName);
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+      }
+      showToast('DOCX отчёт по себестоимости скачан!');
+    } catch (err) {
+      console.error('Cost report error:', err);
+      alert('Ошибка отчёта: ' + err.message);
+    }
+  }
+
+  async function shareOrderCostToTelegram() {
+    if (!selectedOrder) return;
+    const o = selectedOrder;
+    const cisFormatted = o.deliveryDate ? o.deliveryDate.split('-').reverse().join('.') : '-';
+
+    let totalSelling = 0;
+    let totalCost = 0;
+    (o.items || []).forEach(it => {
+      const qty = Number(it.quantity) || 1;
+      const sellPrice = Number(it.price) || 0;
+      let costPrice = Number(it.costPrice);
+      if (!costPrice || isNaN(costPrice)) {
+        const found = allProducts.find(p => p.id === it.id || p.fullName === it.fullName);
+        costPrice = found ? Number(found.costPrice) || 0 : 0;
+      }
+      totalSelling += (qty * sellPrice);
+      totalCost += (qty * costPrice);
+    });
+
+    const totalMargin = totalSelling - totalCost;
+
+    let text = 'ОТЧЁТ ПО СЕБЕСТОИМОСТИ № ' + o.orderNumber + '\n' +
+      'Магазин: ' + o.storeName + '\n' +
+      (o.ownerName || o.ownerPhone ? 'Владелец: ' + (o.ownerName || '-') + (o.ownerPhone ? ' (' + o.ownerPhone + ')' : '') + '\n' : '') +
+      'Дата: ' + cisFormatted + '\n' +
+      'Адрес: ' + (o.address || 'г. Ташкент') + '\n\n' +
+      'Реализация: ' + formatPrice(totalSelling) + ' сум\n' +
+      'Себестоимость: ' + formatPrice(totalCost) + ' сум\n' +
+      'Маржа (Прибыль): +' + formatPrice(totalMargin) + ' сум\n\n' +
+      'ASORTI TRADE PLUS';
+
+    showToast('Подготовка отчёта по себестоимости...');
+
+    try {
+      const blob = await generateCostDocxBlob([o]);
+      const fileName = 'Себестоимость_№' + o.orderNumber + '.docx';
+      const mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      if (window.OrdersNative && typeof window.OrdersNative.shareFileToTelegram === 'function') {
+        const base64Data = await blobToBase64(blob);
+        window.OrdersNative.shareFileToTelegram(base64Data, fileName, mimeType, text);
+        showToast('Отчёт отправлен в Telegram!');
+        return;
+      }
+
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: mimeType });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Себестоимость заказа №' + o.orderNumber,
+            text: text,
+            files: [file]
+          });
+          showToast('Отчёт успешно отправлен!');
+          return;
+        }
+      }
+
+      if (window.saveAs) {
+        window.saveAs(blob, fileName);
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+      }
+      const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+      window.open(tgUrl, '_blank');
+      showToast('Отчёт скачан и открыт Telegram');
+    } catch (err) {
+      console.error('Share cost error:', err);
+      alert('Ошибка отправки: ' + err.message);
+    }
+  }
+
+  async function downloadBatchCostDocx() {
+    const batchInput = document.getElementById('batchDateInput');
+    const d = batchInput ? batchInput.value : '';
+    if (!d) {
+      alert('Пожалуйста, выберите дату');
+      return;
+    }
+
+    const matchingOrders = allOrders.filter(o => o.deliveryDate === d);
+    if (!matchingOrders.length) {
+      alert('На дату ' + d.split('-').reverse().join('.') + ' заказов не найдено');
+      return;
+    }
+
+    showToast('Генерация сводки себестоимости за ' + d + '...');
+
+    try {
+      const blob = await generateCostDocxBlob(matchingOrders);
+      const fileName = 'Сводка_Себестоимости_' + d + '.docx';
+      if (window.saveAs) {
+        window.saveAs(blob, fileName);
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+      }
+      showToast('DOCX сводка себестоимости дня скачана!');
+    } catch (err) {
+      console.error('Batch cost download error:', err);
+      alert('Ошибка сводки: ' + err.message);
+    }
+  }
+
+  async function shareBatchCostToTelegram() {
+    const batchInput = document.getElementById('batchDateInput');
+    const d = batchInput ? batchInput.value : '';
+    if (!d) {
+      alert('Пожалуйста, выберите дату');
+      return;
+    }
+
+    const matchingOrders = allOrders.filter(o => o.deliveryDate === d);
+    if (!matchingOrders.length) {
+      alert('На дату ' + d.split('-').reverse().join('.') + ' заказов не найдено');
+      return;
+    }
+
+    const cisDate = d.split('-').reverse().join('.');
+    let grandSelling = 0;
+    let grandCost = 0;
+
+    matchingOrders.forEach(o => {
+      (o.items || []).forEach(it => {
+        const qty = Number(it.quantity) || 1;
+        const sellPrice = Number(it.price) || 0;
+        let costPrice = Number(it.costPrice);
+        if (!costPrice || isNaN(costPrice)) {
+          const found = allProducts.find(p => p.id === it.id || p.fullName === it.fullName);
+          costPrice = found ? Number(found.costPrice) || 0 : 0;
+        }
+        grandSelling += (qty * sellPrice);
+        grandCost += (qty * costPrice);
+      });
+    });
+
+    const grandMargin = grandSelling - grandCost;
+
+    let text = 'СВОДНЫЙ ОТЧЁТ ПО СЕБЕСТОИМОСТИ ЗА ' + cisDate + '\n' +
+      'Всего накладных: ' + matchingOrders.length + '\n\n' +
+      'Общая реализация: ' + formatPrice(grandSelling) + ' сум\n' +
+      'Общая себестоимость: ' + formatPrice(grandCost) + ' сум\n' +
+      'Чистая маржа (Прибыль): +' + formatPrice(grandMargin) + ' сум\n\n' +
+      'ASORTI TRADE PLUS';
+
+    showToast('Подготовка сводки себестоимости дня...');
+
+    try {
+      const blob = await generateCostDocxBlob(matchingOrders);
+      const fileName = 'Сводка_Себестоимости_' + d + '.docx';
+      const mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+      if (window.OrdersNative && typeof window.OrdersNative.shareFileToTelegram === 'function') {
+        const base64Data = await blobToBase64(blob);
+        window.OrdersNative.shareFileToTelegram(base64Data, fileName, mimeType, text);
+        showToast('Сводка отправлена в Telegram!');
+        return;
+      }
+
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: mimeType });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            title: 'Сводка себестоимости за ' + cisDate,
+            text: text,
+            files: [file]
+          });
+          showToast('Сводка успешно отправлена!');
+          return;
+        }
+      }
+
+      if (window.saveAs) {
+        window.saveAs(blob, fileName);
+      } else {
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = fileName;
+        link.click();
+      }
+      const tgUrl = 'https://t.me/share/url?url=&text=' + encodeURIComponent(text);
+      window.open(tgUrl, '_blank');
+      showToast('Сводка скачана и открыт Telegram');
+    } catch (err) {
+      console.error('Batch cost share error:', err);
+      alert('Ошибка отправки: ' + err.message);
+    }
+  }

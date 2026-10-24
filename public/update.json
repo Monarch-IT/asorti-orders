@@ -1,7 +1,7 @@
 {
-  "versionCode": 2,
-  "versionName": "1.0.1",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.1/AsortiOrders.apk",
-  "changelog": "• Прямая отправка файлов DOCX и PDF в Telegram (вместо обычного текста)\n• Новый сборник заказов на выбранную дату с отправкой в Telegram\n• Исправлен клик по кнопке 'Версия' в нижнем меню\n• Обновления теперь отображаются корректно при наличии интернета",
+  "versionCode": 3,
+  "versionName": "1.0.2",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.2/AsortiOrders.apk",
+  "changelog": "• Обновлённая база товаров (исправлена классификация гелей Persil и Ariel)\n• Добавлены имя и номер телефона владельца магазина в заказ и накладные\n• Формирование структурированных DOCX отчётов по себестоимости и марже (по отдельному заказу и сводка за день)\n• Прямая отправка отчётов себестоимости в Telegram файлом\n• Улучшена стабильность и оформление документов",
   "forceUpdate": false
 }
