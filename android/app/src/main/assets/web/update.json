@@ -1,7 +1,7 @@
 {
-  "versionCode": 4,
-  "versionName": "1.0.3",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.3/AsortiOrders.apk",
-  "changelog": "• Исправлен объём позиции Persil Гель на точный 1.690 л\n• Добавлены поля имени и телефона владельца торговой точки в форму и накладные\n• Формирование структурированных DOCX отчётов по себестоимости и марже с прямой отправкой в Telegram",
+  "versionCode": 5,
+  "versionName": "1.0.4",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.4/AsortiOrders.apk",
+  "changelog": "• Исправлена загрузка обновления: APK скачивается напрямую в хранилище приложения без сбоев кеша системы\n• Добавлен сброс кеша WebView при запуске и обновлении страницы\n• Актуализирован каталог товаров (Persil Гель 1.690 л)\n• Добавлена защита от кеширования данных на стороне сервера и приложения",
   "forceUpdate": false
 }

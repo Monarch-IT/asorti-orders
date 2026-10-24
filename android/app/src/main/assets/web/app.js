@@ -529,10 +529,13 @@ async function loadProducts() {
   }
 
   try {
-    const res = await fetch('/api/products');
+    const res = await fetch('/api/products?t=' + Date.now(), { cache: 'no-store' });
     if (res.ok) {
-      allProducts = await res.json();
-      filterAndRenderProducts();
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        allProducts = data;
+        filterAndRenderProducts();
+      }
     }
   } catch (err) {
     if (!allProducts.length && window.EMBEDDED_PRODUCTS) {

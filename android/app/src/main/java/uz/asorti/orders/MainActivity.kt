@@ -51,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         swipeRefresh.setColorSchemeColors(0xFF003366.toInt(), 0xFF0066CC.toInt())
         swipeRefresh.setOnRefreshListener {
             if (isNetworkAvailable()) {
+                webView.clearCache(true)
                 webView.loadUrl(liveUrl)
             } else {
                 webView.loadUrl(localUrl)
@@ -60,6 +61,7 @@ class MainActivity : AppCompatActivity() {
         configureWebView()
 
         if (isNetworkAvailable()) {
+            webView.clearCache(true)
             webView.loadUrl(liveUrl)
         } else {
             webView.loadUrl(localUrl)
@@ -90,7 +92,7 @@ class MainActivity : AppCompatActivity() {
         s.setSupportZoom(false)
         s.builtInZoomControls = false
         s.displayZoomControls = false
-        s.cacheMode = if (isNetworkAvailable()) WebSettings.LOAD_DEFAULT else WebSettings.LOAD_CACHE_ELSE_NETWORK
+        s.cacheMode = if (isNetworkAvailable()) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_CACHE_ELSE_NETWORK
 
         webView.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
         webView.isHapticFeedbackEnabled = true
@@ -107,7 +109,7 @@ class MainActivity : AppCompatActivity() {
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
                 val urlStr = request?.url?.toString() ?: ""
-                if (urlStr.endsWith("/api/products") && !isNetworkAvailable()) {
+                if (urlStr.contains("/api/products") && !isNetworkAvailable()) {
                     try {
                         val input = assets.open("web/api/products")
                         return WebResourceResponse("application/json", "UTF-8", input)
