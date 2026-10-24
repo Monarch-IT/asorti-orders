@@ -1,0 +1,7 @@
+{
+  "versionCode": 1,
+  "versionName": "1.0.0",
+  "apkUrl": "https://asorty-trade-plus.web.app/update.json",
+  "changelog": "• Экспорт накладных и сборных листов по датам в DOCX и PDF\\n• Мгновенная отправка накладных и сборников в Telegram\\n• Новый фирменный прозрачный логотип и иконка ASSORTI TRADE PLUS\\n• Полная интеграция с базой данных Supabase",
+  "forceUpdate": false
+}

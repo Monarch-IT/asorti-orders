@@ -1,0 +1,9 @@
+node_modules/
+.firebase/
+.firebaserc
+android/.gradle/
+android/app/build/
+android/build/
+local.properties
+.DS_Store
+*.log

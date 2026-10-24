@@ -1,0 +1,9 @@
+<resources>
+    <style name="Theme.OrdersApp" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">#003366</item>
+        <item name="colorPrimaryVariant">#001f3f</item>
+        <item name="colorOnPrimary">#ffffff</item>
+        <item name="android:statusBarColor">#003366</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "ord-876324",
+    "orderNumber": "876324",
+    "deliveryDate": "2026-06-03",
+    "storeName": "Hummo Fayz",
+    "address": "г. Ташкент, Яккасарайский р-н, ул. Шота Руставели 45",
+    "coords": {
+      "lat": 41.2858,
+      "lng": 69.2034
+    },
+    "agentName": "Javohir",
+    "agentPhone": "77 030 32 52",
+    "status": "delivered",
+    "createdAt": "2026-10-24T13:06:41.847Z",
+    "items": [
+      {
+        "id": 40,
+        "fullName": "Domestos Чистящий гель 750 мл",
+        "volume": "750 ml",
+        "price": 28000,
+        "quantity": 20
+      },
+      {
+        "id": 39,
+        "fullName": "Comet Чистящий порошок 490 г",
+        "volume": "500 ml",
+        "price": 26000,
+        "quantity": 16
+      }
+    ],
+    "totalAmount": 976000
+  },
+  {
+    "id": "ord-876325",
+    "orderNumber": "876325",
+    "deliveryDate": "2026-06-03",
+    "storeName": "Baraka Market #14",
+    "address": "г. Ташкент, Мирзо-Улугбекский р-н, Карасу-4",
+    "coords": {
+      "lat": 41.3281,
+      "lng": 69.3344
+    },
+    "agentName": "Javohir",
+    "agentPhone": "77 030 32 52",
+    "status": "planned",
+    "createdAt": "2026-10-24T13:06:41.847Z",
+    "items": [
+      {
+        "id": 1,
+        "fullName": "Ariel Порошок 450 г (Коробка)",
+        "volume": "450 г",
+        "price": 15000,
+        "quantity": 10
+      },
+      {
+        "id": 26,
+        "fullName": "Ariel Гель 2 л",
+        "volume": "2 л",
+        "price": 100000,
+        "quantity": 4
+      }
+    ],
+    "totalAmount": 550000
+  }
+]
