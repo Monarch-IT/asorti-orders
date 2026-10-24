@@ -68,15 +68,19 @@ function initSupabase() {
 }
 
 function mapToDb(payload, customId) {
+  const coordsData = {
+    ...(payload.coords || {}),
+    ownerName: payload.ownerName || '',
+    ownerPhone: payload.ownerPhone || ''
+  };
+
   return {
     id: customId || crypto.randomUUID(),
     order_number: payload.orderNumber,
     delivery_date: payload.deliveryDate,
     store_name: payload.storeName,
-    owner_name: payload.ownerName || '',
-    owner_phone: payload.ownerPhone || '',
     address: payload.address,
-    coords: payload.coords,
+    coords: coordsData,
     agent_name: payload.agentName || 'Javohir',
     agent_phone: payload.agentPhone || '77 030 32 52',
     status: payload.status || 'planned',
@@ -87,15 +91,19 @@ function mapToDb(payload, customId) {
 }
 
 function mapFromDb(row) {
+  const coordsObj = row.coords || {};
   return {
     id: row.id,
     orderNumber: row.order_number,
     deliveryDate: row.delivery_date,
     storeName: row.store_name,
-    ownerName: row.owner_name || '',
-    ownerPhone: row.owner_phone || '',
+    ownerName: row.owner_name || coordsObj.ownerName || '',
+    ownerPhone: row.owner_phone || coordsObj.ownerPhone || '',
     address: row.address,
-    coords: row.coords,
+    coords: {
+      lat: coordsObj.lat || null,
+      lng: coordsObj.lng || null
+    },
     agentName: row.agent_name,
     agentPhone: row.agent_phone,
     status: row.status,
@@ -944,7 +952,17 @@ async function loadOrders() {
     }
 
     if (rows && Array.isArray(rows)) {
-      allOrders = rows.map(mapFromDb);
+      const dbOrders = rows.map(mapFromDb);
+      const offlineQueue = getOfflineQueue();
+      const offlineOrders = offlineQueue.map(q => q.payload).filter(Boolean);
+
+      const combined = [...offlineOrders];
+      dbOrders.forEach(o => {
+        if (!combined.some(existing => existing.id === o.id || existing.orderNumber === o.orderNumber)) {
+          combined.push(o);
+        }
+      });
+      allOrders = combined;
       saveLocalOrders(allOrders);
     } else {
       allOrders = getLocalOrders();

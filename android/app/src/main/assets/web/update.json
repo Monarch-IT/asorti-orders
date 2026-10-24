@@ -1,7 +1,7 @@
 {
-  "versionCode": 6,
-  "versionName": "1.0.5",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.5/AsortiOrders.apk",
-  "changelog": "• Добавлены новые товары: Pemaluxe 500 г, Toilet Duck 0.5 л и 1 л, Domestos 850 мл\n• Добавлен интерактивный выбор цветов для Domestos (Зелёный, Синий, Жёлтый) и Юмуш (Розовый, Синий, Красный) с распределением количества в заказе и накладных\n• Улучшена стабильность и работа без кеширования",
+  "versionCode": 7,
+  "versionName": "1.0.6",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.6/AsortiOrders.apk",
+  "changelog": "• Исправлено сохранение заказов в базу: заказы мгновенно сохраняются онлайн и не исчезают при перезагрузке\n• Синхронизация данных владельца магазина и выбранных цветов\n• Актуализирован каталог товаров",
   "forceUpdate": false
 }
