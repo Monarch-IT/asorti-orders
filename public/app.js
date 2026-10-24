@@ -571,12 +571,14 @@ function renderProductList() {
   container.innerHTML = filteredProducts.map(p => {
     const inCart = cart.find(c => c.product.id === p.id);
     const count = inCart ? inCart.quantity : 0;
+    const colorsTag = (p.colors && p.colors.length) ?
+      '<div class="item-colors-badge"> Цвета: ' + p.colors.join(', ') + '</div>' : '';
 
     return '<div class="product-row-item">' +
       '<div class="item-left">' +
       '<span class="item-category-tag">' + p.category.split(' ')[0] + '</span>' +
       '<div class="item-title">' + p.fullName + '</div>' +
-      '<div class="item-meta">' + (p.volume || '') + ' ' + (p.note ? '• ' + p.note : '') + '</div>' +
+      '<div class="item-meta">' + (p.volume || '') + ' ' + (p.note ? '• ' + p.note : '') + colorsTag + '</div>' +
       '<div class="item-price">' + formatPrice(p.price) + ' сум</div>' +
       '</div>' +
       '<div class="item-stepper">' +
@@ -591,10 +593,61 @@ function renderProductList() {
   }).join('');
 }
 
+function getColorClass(col) {
+  if (!col) return 'default';
+  const c = col.toLowerCase();
+  if (c.includes('зел')) return 'green';
+  if (c.includes('син')) return 'blue';
+  if (c.includes('жел') || c.includes('жёл')) return 'yellow';
+  if (c.includes('роз')) return 'pink';
+  if (c.includes('крас')) return 'red';
+  return 'default';
+}
+
+function getColorSummaryText(item) {
+  if (!item.product.colors || !item.colorBreakdown) return '';
+  const parts = [];
+  item.product.colors.forEach(col => {
+    const q = Number(item.colorBreakdown[col]) || 0;
+    if (q > 0) parts.push(col + ': ' + q + ' шт');
+  });
+  return parts.length ? parts.join(', ') : 'Не выбрано';
+}
+
+function syncColorBreakdownToTotal(item) {
+  if (!item.product.colors || !item.product.colors.length) return;
+  if (!item.colorBreakdown) item.colorBreakdown = {};
+  let currentSum = 0;
+  item.product.colors.forEach(c => {
+    if (typeof item.colorBreakdown[c] !== 'number') item.colorBreakdown[c] = 0;
+    currentSum += item.colorBreakdown[c];
+  });
+  const diff = item.quantity - currentSum;
+  if (diff !== 0) {
+    const firstCol = item.product.colors.find(c => (item.colorBreakdown[c] || 0) > 0) || item.product.colors[0];
+    item.colorBreakdown[firstCol] = Math.max(0, (item.colorBreakdown[firstCol] || 0) + diff);
+    let newSum = Object.values(item.colorBreakdown).reduce((a, b) => a + b, 0);
+    if (newSum !== item.quantity) {
+      item.colorBreakdown[item.product.colors[0]] = item.quantity;
+      item.product.colors.slice(1).forEach(c => item.colorBreakdown[c] = 0);
+    }
+  }
+}
+
 window.addToCartDirect = function (productId) {
   const p = allProducts.find(x => x.id === productId);
   if (!p) return;
-  cart.push({ product: p, quantity: 1 });
+  const initialColors = {};
+  if (p.colors && p.colors.length) {
+    p.colors.forEach((c, idx) => {
+      initialColors[c] = (idx === 0 ? 1 : 0);
+    });
+  }
+  cart.push({
+    product: p,
+    quantity: 1,
+    colorBreakdown: initialColors
+  });
   updateCartUi();
   renderProductList();
   showToast('+1 ' + p.brand);
@@ -609,6 +662,9 @@ window.setItemCountDirect = function (productId, val) {
   const item = cart.find(c => c.product.id === productId);
   if (item) {
     item.quantity = parsed;
+    if (item.product.colors && item.product.colors.length) {
+      syncColorBreakdownToTotal(item);
+    }
     updateCartUi();
     renderProductList();
   }
@@ -621,6 +677,44 @@ window.updateItemCount = function (productId, delta) {
   item.quantity += delta;
   if (item.quantity <= 0) {
     cart = cart.filter(c => c.product.id !== productId);
+  } else if (item.product.colors && item.product.colors.length) {
+    syncColorBreakdownToTotal(item);
+  }
+  updateCartUi();
+  renderProductList();
+};
+
+window.updateItemColorCount = function (productId, color, delta) {
+  const item = cart.find(c => c.product.id === productId);
+  if (!item || !item.product.colors) return;
+  if (!item.colorBreakdown) item.colorBreakdown = {};
+  const current = Number(item.colorBreakdown[color]) || 0;
+  const next = Math.max(0, current + delta);
+  item.colorBreakdown[color] = next;
+  const sum = item.product.colors.reduce((s, col) => s + (Number(item.colorBreakdown[col]) || 0), 0);
+  if (sum <= 0) {
+    item.colorBreakdown[color] = 1;
+    item.quantity = 1;
+  } else {
+    item.quantity = sum;
+  }
+  updateCartUi();
+  renderProductList();
+};
+
+window.setItemColorCountDirect = function (productId, color, val) {
+  const item = cart.find(c => c.product.id === productId);
+  if (!item || !item.product.colors) return;
+  const parsed = parseInt(val, 10);
+  const next = isNaN(parsed) || parsed < 0 ? 0 : parsed;
+  if (!item.colorBreakdown) item.colorBreakdown = {};
+  item.colorBreakdown[color] = next;
+  const sum = item.product.colors.reduce((s, col) => s + (Number(item.colorBreakdown[col]) || 0), 0);
+  if (sum <= 0) {
+    item.colorBreakdown[color] = 1;
+    item.quantity = 1;
+  } else {
+    item.quantity = sum;
   }
   updateCartUi();
   renderProductList();
@@ -652,19 +746,48 @@ function updateCartUi() {
   wordsEl.innerText = 'Сумма прописью: ' + numberToWordsRu(total);
 
   if (trayContainer) {
-    trayContainer.innerHTML = cart.map(i =>
-      '<div class="cart-tray-row">' +
-      '<div class="cart-tray-name">' +
-      '<div>' + i.product.fullName + '</div>' +
-      '<div class="cart-tray-sub">' + formatPrice(i.product.price) + ' сум/шт</div>' +
-      '</div>' +
-      '<div class="cart-tray-ctrls">' +
-      '<input type="number" min="1" class="cart-tray-qty-input" value="' + i.quantity + '" onchange="setItemCountDirect(' + i.product.id + ', this.value)">' +
-      '<div class="cart-tray-price">' + formatPrice(i.quantity * i.product.price) + ' сум</div>' +
-      '<button type="button" class="btn-remove-tray" title="Убрать из заказа" onclick="removeFromCart(' + i.product.id + ')">&times;</button>' +
-      '</div>' +
-      '</div>'
-    ).join('');
+    trayContainer.innerHTML = cart.map(i => {
+      const hasColors = i.product.colors && i.product.colors.length;
+      let colorsBox = '';
+      if (hasColors) {
+        const chipsHtml = i.product.colors.map(col => {
+          const colQty = (i.colorBreakdown && i.colorBreakdown[col] !== undefined) ? i.colorBreakdown[col] : 0;
+          const colClass = getColorClass(col);
+          return '<div class="color-picker-item">' +
+            '<span class="color-dot color-dot-' + colClass + '"></span>' +
+            '<span class="color-name">' + col + '</span>' +
+            '<div class="color-item-stepper">' +
+            '<button type="button" class="btn-col-step" onclick="updateItemColorCount(' + i.product.id + ', \'' + col + '\', -1)">&minus;</button>' +
+            '<input type="number" min="0" class="col-qty-input" value="' + colQty + '" onchange="setItemColorCountDirect(' + i.product.id + ', \'' + col + '\', this.value)">' +
+            '<button type="button" class="btn-col-step" onclick="updateItemColorCount(' + i.product.id + ', \'' + col + '\', 1)">&plus;</button>' +
+            '</div>' +
+            '</div>';
+        }).join('');
+
+        colorsBox = '<div class="cart-tray-colors-box">' +
+          '<div class="colors-box-header">' +
+          '<span class="colors-box-label">Цвета:</span>' +
+          '<span class="colors-box-sum">' + getColorSummaryText(i) + '</span>' +
+          '</div>' +
+          '<div class="colors-chips-row">' + chipsHtml + '</div>' +
+          '</div>';
+      }
+
+      return '<div class="cart-tray-row-container">' +
+        '<div class="cart-tray-row">' +
+        '<div class="cart-tray-name">' +
+        '<div>' + i.product.fullName + '</div>' +
+        '<div class="cart-tray-sub">' + formatPrice(i.product.price) + ' сум/шт' + (hasColors ? ' • выбор цветов ниже' : '') + '</div>' +
+        '</div>' +
+        '<div class="cart-tray-ctrls">' +
+        '<input type="number" min="1" class="cart-tray-qty-input" value="' + i.quantity + '" onchange="setItemCountDirect(' + i.product.id + ', this.value)">' +
+        '<div class="cart-tray-price">' + formatPrice(i.quantity * i.product.price) + ' сум</div>' +
+        '<button type="button" class="btn-remove-tray" title="Убрать из заказа" onclick="removeFromCart(' + i.product.id + ')">&times;</button>' +
+        '</div>' +
+        '</div>' +
+        colorsBox +
+        '</div>';
+    }).join('');
   }
 }
 
@@ -693,14 +816,28 @@ async function submitOrder() {
   const orderNumber = String(Math.floor(100000 + Math.random() * 900000));
   const orderUuid = crypto.randomUUID();
 
-  const orderItems = cart.map(i => ({
-    id: i.product.id,
-    fullName: i.product.fullName,
-    volume: i.product.volume || '-',
-    price: Number(i.product.price) || 0,
-    costPrice: Number(i.product.costPrice) || 0,
-    quantity: Number(i.quantity) || 1
-  }));
+  const orderItems = cart.map(i => {
+    let colorText = '';
+    if (i.product.colors && i.colorBreakdown) {
+      const parts = [];
+      for (const col of i.product.colors) {
+        const q = Number(i.colorBreakdown[col]) || 0;
+        if (q > 0) parts.push(col + ': ' + q + ' шт');
+      }
+      if (parts.length > 0) colorText = parts.join(', ');
+    }
+
+    return {
+      id: i.product.id,
+      fullName: i.product.fullName,
+      volume: i.product.volume || '-',
+      price: Number(i.product.price) || 0,
+      costPrice: Number(i.product.costPrice) || 0,
+      quantity: Number(i.quantity) || 1,
+      colorText: colorText,
+      colorBreakdown: i.colorBreakdown || null
+    };
+  });
 
   const totalAmount = orderItems.reduce((s, i) => s + (i.price * i.quantity), 0);
 
@@ -957,6 +1094,7 @@ function openOrderModal(order) {
     '<div>' +
     '<b>' + i.fullName + '</b>' +
     '<span style="color: var(--text-muted); font-size: 11px;"> (' + (i.volume || '-') + ')</span>' +
+    (i.colorText ? '<div style="font-size: 11px; color: #2563eb; font-weight: 600; margin-top: 2px;">🎨 ' + i.colorText + '</div>' : '') +
     '</div>' +
     '<div style="text-align: right;">' +
     '<div>' + i.quantity + ' шт &times; ' + formatPrice(i.price) + '</div>' +
@@ -1026,7 +1164,7 @@ function buildSingleTableXml(order) {
 
   let rowsXml = '';
   (order.items || []).forEach(item => {
-    const name = sanitizeXml(item.fullName || item.name || '');
+    const name = sanitizeXml(item.fullName || item.name || '') + (item.colorText ? ' (Цвета: ' + sanitizeXml(item.colorText) + ')' : '');
     const vol = sanitizeXml(item.volume || '-');
     const qty = item.quantity + ' шт';
     const price = formatPrice(item.price);
@@ -1160,7 +1298,7 @@ function buildPdfMakeDocDefinition(orders) {
 
       (order.items || []).forEach(it => {
         itemRows.push([
-          { text: it.fullName || it.name, fontSize: 8 },
+          { text: (it.fullName || it.name) + (it.colorText ? '\n(Цвета: ' + it.colorText + ')' : ''), fontSize: 8 },
           { text: it.volume || '-', fontSize: 8, alignment: 'center' },
           { text: it.quantity + ' шт', fontSize: 8, alignment: 'center', bold: true },
           { text: formatPrice(it.price) + ' сум', fontSize: 8, alignment: 'right' },
@@ -1370,7 +1508,7 @@ async function shareOrderFileToTelegram(fmt) {
   const cisFormatted = o.deliveryDate ? o.deliveryDate.split('-').reverse().join('.') : '-';
 
   const itemsText = (o.items || []).map((it, idx) =>
-    (idx + 1) + '. ' + it.fullName + ' — ' + it.quantity + ' шт x ' + formatPrice(it.price) + ' = ' + formatPrice(it.quantity * it.price) + ' сум'
+    (idx + 1) + '. ' + it.fullName + (it.colorText ? ' [Цвета: ' + it.colorText + ']' : '') + ' — ' + it.quantity + ' шт x ' + formatPrice(it.price) + ' = ' + formatPrice(it.quantity * it.price) + ' сум'
   ).join('\n');
 
   let text = 'НАКЛАДНАЯ № ' + o.orderNumber + '\n' +
@@ -1664,7 +1802,7 @@ function buildSingleCostTableXml(order) {
     let rowsXml = '';
 
     (order.items || []).forEach(item => {
-      const name = sanitizeXml(item.fullName || item.name || '');
+      const name = sanitizeXml(item.fullName || item.name || '') + (item.colorText ? ' (Цвета: ' + sanitizeXml(item.colorText) + ')' : '');
       const vol = sanitizeXml(item.volume || '-');
       const qty = Number(item.quantity) || 1;
       const sellPrice = Number(item.price) || 0;
