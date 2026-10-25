@@ -1099,6 +1099,8 @@ body {
 .color-dot-yellow { background: #eab308; box-shadow: 0 0 0 2px #fef08a; }
 .color-dot-pink { background: #ec4899; box-shadow: 0 0 0 2px #fce7f3; }
 .color-dot-red { background: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
+.color-dot-white { background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 0 0 2px #f1f5f9; }
+.color-dot-black { background: #18181b; box-shadow: 0 0 0 2px #e4e4e7; }
 .color-dot-default { background: #64748b; }
 .color-item-stepper {
   display: inline-flex;

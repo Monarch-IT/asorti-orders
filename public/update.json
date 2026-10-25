@@ -1,7 +1,7 @@
 {
-  "versionCode": 8,
-  "versionName": "1.0.7",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.7/AsortiOrders.apk",
-  "changelog": "• Две версии отчёта себестоимости дня: единая сводная таблица для ASORTI (с маржой и чистой прибылью) и отдельный бланк заказа для Поставщика (с себестоимостью, без розничных цен)\n• Отправка подробного списка всех товаров дня и файлов DOCX в Telegram\n• Разделение контроля и истории: при убирании из Контроля заказ сохраняется в Истории\n• Журнал удалений из Истории с точным временем и числом удаления",
+  "versionCode": 9,
+  "versionName": "1.0.8",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.8/AsortiOrders.apk",
+  "changelog": "• Разделение на цвета (Белый, Чёрный) для Шампуня Clear 200 мл и 400 мл\n• Из накладных и отчётов исключены телефонные номера компании и торговых агентов (имя агента сохранено)",
   "forceUpdate": false
 }

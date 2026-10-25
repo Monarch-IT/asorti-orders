@@ -88,7 +88,6 @@ function buildSingleTableXml(order) {
   const clientName = sanitizeXml(order.storeName || 'Магазин');
   const address = sanitizeXml(order.address || 'г. Ташкент');
   const agentName = sanitizeXml(order.agentName || 'Javohir');
-  const agentPhone = sanitizeXml(order.agentPhone || '77 030 32 52');
   const totalAmount = order.totalAmount || 0;
   const totalFormatted = formatPrice(totalAmount);
   const totalInWords = sanitizeXml(numberToWordsRu(totalAmount));
@@ -144,7 +143,7 @@ function buildSingleTableXml(order) {
         <w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>
         <w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОТПРАВИТЕЛЬ:</w:t></w:r></w:p>
         <w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="003366"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>
-        <w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>${agentName} (${agentPhone})</w:t></w:r></w:p>
+        <w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>${agentName}</w:t></w:r></w:p>
       </w:tc>
       <w:tc>
         <w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="5200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>
@@ -246,8 +245,7 @@ function generatePdf(orders) {
         const startY = doc.y;
         
         doc.font(boldFont).text('ОТПРАВИТЕЛЬ: ', 30, startY, { continued: true }).font(regularFont).text('ASORTI TRADE PLUS');
-        doc.font(boldFont).text('ТОРГОВЫЙ АГЕНТ: ', 30, doc.y + 2, { continued: true }).font(regularFont).text(`${order.agentName || 'Javohir'} ${order.agentPhone || '77 030 32 52'}`);
-        doc.font(boldFont).text('ДОСТАВЩИК: ', 30, doc.y + 2, { continued: true }).font(regularFont).text(order.agentPhone || '77 030 32 52');
+        doc.font(boldFont).text('ТОРГОВЫЙ АГЕНТ: ', 30, doc.y + 2, { continued: true }).font(regularFont).text(order.agentName || 'Javohir');
 
         doc.font(boldFont).text('ПОЛУЧАТЕЛЬ: ', 290, startY, { continued: true }).font(boldFont).text(order.storeName || 'Магазин');
         const loc = order.address || 'г. Ташкент';

@@ -83,7 +83,7 @@ function mapToDb(payload, customId) {
     address: payload.address,
     coords: coordsData,
     agent_name: payload.agentName || 'Javohir',
-    agent_phone: payload.agentPhone || '77 030 32 52',
+    agent_phone: payload.agentPhone || '',
     status: payload.status || 'planned',
     created_at: payload.createdAt || new Date().toISOString(),
     items: payload.items,
@@ -95,23 +95,23 @@ function mapFromDb(row) {
   const coordsObj = row.coords || {};
   return {
     id: row.id,
-    orderNumber: row.order_number,
-    deliveryDate: row.delivery_date,
-    storeName: row.store_name,
-    ownerName: row.owner_name || coordsObj.ownerName || '',
-    ownerPhone: row.owner_phone || coordsObj.ownerPhone || '',
+    orderNumber: row.order_number || row.orderNumber || '000000',
+    deliveryDate: row.delivery_date || row.deliveryDate || '',
+    storeName: row.store_name || row.storeName || 'Магазин',
+    ownerName: row.owner_name || row.ownerName || coordsObj.ownerName || '',
+    ownerPhone: row.owner_phone || row.ownerPhone || coordsObj.ownerPhone || '',
     address: row.address,
     coords: {
       lat: coordsObj.lat || null,
       lng: coordsObj.lng || null
     },
     dismissedFromControl: coordsObj.dismissedFromControl === true || coordsObj.dismissedFromControl === 'true',
-    agentName: row.agent_name,
-    agentPhone: row.agent_phone,
-    status: row.status,
-    createdAt: row.created_at,
+    agentName: row.agent_name || row.agentName || 'Javohir',
+    agentPhone: row.agent_phone || row.agentPhone || '',
+    status: row.status || 'planned',
+    createdAt: row.created_at || row.createdAt,
     items: row.items || [],
-    totalAmount: row.total_amount
+    totalAmount: row.total_amount !== undefined ? row.total_amount : (row.totalAmount || 0)
   };
 }
 
@@ -623,6 +623,8 @@ function getColorClass(col) {
   if (c.includes('жел') || c.includes('жёл')) return 'yellow';
   if (c.includes('роз')) return 'pink';
   if (c.includes('крас')) return 'red';
+  if (c.includes('бел')) return 'white';
+  if (c.includes('чер') || c.includes('чёр')) return 'black';
   return 'default';
 }
 
@@ -873,7 +875,7 @@ async function submitOrder() {
     address: chosenAddress,
     coords: currentCoords,
     agentName: 'Javohir',
-    agentPhone: '77 030 32 52',
+    agentPhone: '',
     status: 'planned',
     createdAt: new Date().toISOString(),
     items: orderItems,
@@ -1062,7 +1064,11 @@ function createOrderCardHtml(order, isControlTab) {
     badgeText = 'Отменён';
   }
 
-  const cisFormatted = order.deliveryDate ? order.deliveryDate.split('-').reverse().join('.') : '-';
+  const orderNum = order.orderNumber || order.order_number || '000000';
+  const rawDate = order.deliveryDate || order.delivery_date || '';
+  const cisFormatted = rawDate ? rawDate.split('-').reverse().join('.') : '-';
+  const store = order.storeName || order.store_name || 'Магазин';
+  const totalAmt = order.totalAmount !== undefined ? order.totalAmount : (order.total_amount !== undefined ? order.total_amount : 0);
 
   const actionBtnHtml = isControlTab
     ? '<button type="button" class="btn-order-dismiss" onclick="dismissOrderFromControl(\'' + order.id + '\', event)">Убрать из контроля</button>'
@@ -1070,14 +1076,14 @@ function createOrderCardHtml(order, isControlTab) {
 
   return '<div class="order-card">' +
     '<div class="order-card-header">' +
-    '<div class="order-num">№ ' + order.orderNumber + '</div>' +
+    '<div class="order-num">№ ' + orderNum + '</div>' +
     '<div class="order-date-tag">' + cisFormatted + '</div>' +
     '</div>' +
-    '<div class="order-store-title">' + order.storeName + '</div>' +
+    '<div class="order-store-title">' + store + '</div>' +
     '<div class="order-address-text">' + (order.address || 'г. Ташкент') + '</div>' +
     '<div class="order-card-footer">' +
     '<div>' +
-    '<div class="order-amount">' + formatPrice(order.totalAmount) + ' сум</div>' +
+    '<div class="order-amount">' + formatPrice(totalAmt) + ' сум</div>' +
     '<span class="badge-status ' + badgeClass + '">' + badgeText + '</span>' +
     '</div>' +
     '<div class="order-actions-row">' +
@@ -1312,7 +1318,6 @@ function buildSingleTableXml(order) {
     : '';
   const address = sanitizeXml(order.address || 'г. Ташкент');
   const agentName = sanitizeXml(order.agentName || 'Javohir');
-  const agentPhone = sanitizeXml(order.agentPhone || '77 030 32 52');
   const totalAmount = order.totalAmount || 0;
   const totalFormatted = formatPrice(totalAmount);
   const totalInWords = sanitizeXml(numberToWordsRu(totalAmount));
@@ -1366,7 +1371,7 @@ function buildSingleTableXml(order) {
     '<w:tcPr><w:tcW w:w="5000" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
     '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОТПРАВИТЕЛЬ:</w:t></w:r></w:p>' +
     '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="003366"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>' +
-    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + ' (' + agentPhone + ')</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + '</w:t></w:r></w:p>' +
     '</w:tc>' +
     '<w:tc>' +
     '<w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="5200" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F4F6F9"/></w:tcPr>' +
@@ -1485,8 +1490,7 @@ function buildPdfMakeDocDefinition(orders) {
               fontSize: 8.5,
               stack: [
                 { text: [{ text: 'ОТПРАВИТЕЛЬ: ', bold: true }, 'OOO "ASORTI TRADE PLUS"'] },
-                { text: [{ text: 'ТОРГОВЫЙ АГЕНТ: ', bold: true }, (order.agentName || 'Javohir') + ' (' + (order.agentPhone || '77 030 32 52') + ')'] },
-                { text: [{ text: 'ДОСТАВЩИК: ', bold: true }, order.agentPhone || '77 030 32 52'] }
+                { text: [{ text: 'ТОРГОВЫЙ АГЕНТ: ', bold: true }, order.agentName || 'Javohir'] }
               ]
             },
             {
@@ -1969,7 +1973,6 @@ function buildSingleCostTableXml(order) {
     : '';
   const address = sanitizeXml(order.address || 'г. Ташкент');
   const agentName = sanitizeXml(order.agentName || 'Javohir');
-  const agentPhone = sanitizeXml(order.agentPhone || '77 030 32 52');
 
   let totalSelling = 0;
   let totalCost = 0;
@@ -2039,7 +2042,7 @@ function buildSingleCostTableXml(order) {
     '<w:tcPr><w:gridSpan w:val="3"/><w:tcW w:w="5300" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr>' +
     '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>ОРГАНИЗАЦИЯ / АГЕНТ:</w:t></w:r></w:p>' +
     '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:b/><w:sz w:val="20"/><w:color w:val="166534"/></w:rPr><w:t>OOO "ASORTI TRADE PLUS"</w:t></w:r></w:p>' +
-    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + ' (' + agentPhone + ')</w:t></w:r></w:p>' +
+    '<w:p><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:color w:val="666666"/><w:sz w:val="16"/></w:rPr><w:t>Агент: </w:t></w:r><w:r><w:rPr><w:b/><w:sz w:val="18"/></w:rPr><w:t>' + agentName + '</w:t></w:r></w:p>' +
     '</w:tc>' +
     '<w:tc>' +
     '<w:tcPr><w:gridSpan w:val="4"/><w:tcW w:w="4900" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="F0FDF4"/></w:tcPr>' +
@@ -2229,11 +2232,12 @@ function aggregateOrdersProducts(orders) {
     (order.items || []).forEach(item => {
       const name = item.fullName || item.name || 'Товар';
       const vol = item.volume || '';
-      const key = (item.id || (name + '__' + vol)).toLowerCase();
+      const rawKey = (item.id !== undefined && item.id !== null && item.id !== '') ? item.id : (name + '__' + vol);
+      const key = String(rawKey).toLowerCase();
 
       let costPrice = Number(item.costPrice);
       if (!costPrice || isNaN(costPrice)) {
-        const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
+        const found = allProducts.find(p => String(p.id) === String(item.id) || p.fullName === item.fullName);
         costPrice = found ? Number(found.costPrice) || 0 : 0;
       }
       const sellPrice = Number(item.price) || 0;
@@ -2281,7 +2285,7 @@ function aggregateOrdersProducts(orders) {
   });
 
   const list = Array.from(map.values());
-  list.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
+  list.sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'ru'));
   return list;
 }
 
