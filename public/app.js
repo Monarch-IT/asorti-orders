@@ -363,7 +363,7 @@ function applyLocationUi(lat, lon, addressStr, moveMap = true) {
   const yandexNavBtn = document.getElementById('yandexNavBtn');
 
   btn.classList.add('active');
-  btnText.innerText = '✓ Локация определена';
+  btnText.innerText = 'Локация определена';
   manualInput.value = addressStr;
   const detectedBadge = document.getElementById('detectedAddressText');
   if (detectedBadge) {
@@ -2555,15 +2555,15 @@ async function shareBatchCostAsortiToTelegram() {
 
   const grandMargin = grandSelling - grandCost;
 
-  let text = '📊 СВОДНЫЙ ОТЧЁТ ASORTI ЗА ' + cisDate + '\n' +
+  let text = 'СВОДНЫЙ ОТЧЁТ ASORTI ЗА ' + cisDate + '\n' +
     'Всего накладных: ' + matchingOrders.length + '\n\n' +
     'СПИСОК ВСЕХ ТОВАРОВ НА ДЕНЬ:\n' +
     itemsText +
     '────────────────────\n' +
-    '📦 Позиций: ' + aggregated.length + ' | Всего товаров: ' + grandQty + ' шт\n' +
-    '💵 Общая себестоимость: ' + formatPrice(grandCost) + ' сум\n' +
-    '💰 Общая реализация: ' + formatPrice(grandSelling) + ' сум\n' +
-    '📈 ЧИСТАЯ ПРИБЫЛЬ (МАРЖА): +' + formatPrice(grandMargin) + ' сум\n\n' +
+    'Позиций: ' + aggregated.length + ' | Всего товаров: ' + grandQty + ' шт\n' +
+    'Общая себестоимость: ' + formatPrice(grandCost) + ' сум\n' +
+    'Общая реализация: ' + formatPrice(grandSelling) + ' сум\n' +
+    'ЧИСТАЯ ПРИБЫЛЬ (МАРЖА): +' + formatPrice(grandMargin) + ' сум\n\n' +
     'ASORTI TRADE PLUS';
 
   showToast('Подготовка отчёта ASORTI для Telegram...');
@@ -2677,14 +2677,14 @@ async function shareBatchCostSupplierToTelegram() {
       '   ' + item.quantity + ' шт × ' + formatPrice(item.costPrice) + ' = ' + formatPrice(item.totalCost) + ' сум\n';
   });
 
-  let text = '📦 ЗАКАЗ ТОВАРОВ ПОСТАВЩИКУ\n' +
-    '🏢 Заказчик: OOO "ASORTI TRADE PLUS"\n' +
-    '📅 Дата поставки: ' + cisDate + '\n\n' +
+  let text = 'ЗАКАЗ ТОВАРОВ ПОСТАВЩИКУ\n' +
+    'Заказчик: OOO "ASORTI TRADE PLUS"\n' +
+    'Дата поставки: ' + cisDate + '\n\n' +
     'СПИСОК ТОВАРОВ К ПОСТАВКЕ:\n' +
     itemsText +
     '────────────────────\n' +
-    '📦 Позиций: ' + aggregated.length + ' | Всего товаров: ' + grandQty + ' шт\n' +
-    '💰 ОБЩАЯ СУММА К ОПЛАТЕ: ' + formatPrice(grandCost) + ' сум\n\n' +
+    'Позиций: ' + aggregated.length + ' | Всего товаров: ' + grandQty + ' шт\n' +
+    'ОБЩАЯ СУММА К ОПЛАТЕ: ' + formatPrice(grandCost) + ' сум\n\n' +
     'OOO "ASORTI TRADE PLUS"';
 
   showToast('Подготовка заказа поставщику для Telegram...');
