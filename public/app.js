@@ -2131,7 +2131,46 @@ function setupEventListeners() {
     });
   }
 
-  const btnToggleAdmin = document.getElementById('btnToggleAdminBox');
+  let secretTitleClickCount = 0;
+  let secretTitleClickTimer = null;
+
+  function toggleSecretOwnerBox() {
+    const box = document.getElementById('ownerSecretAuthBox');
+    if (!box) return;
+    const isHidden = box.style.display === 'none' || !box.style.display;
+    box.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      const pinInp = document.getElementById('ownerPinInput');
+      if (pinInp) {
+        pinInp.value = '';
+        setTimeout(() => pinInp.focus(), 100);
+      }
+    }
+  }
+
+  const btnSecretVer = document.getElementById('btnSecretTriggerOwner');
+  if (btnSecretVer) {
+    btnSecretVer.addEventListener('click', () => {
+      toggleSecretOwnerBox();
+    });
+  }
+
+  const modalTitleElem = document.getElementById('accountModalTitle');
+  if (modalTitleElem) {
+    modalTitleElem.addEventListener('click', () => {
+      secretTitleClickCount++;
+      clearTimeout(secretTitleClickTimer);
+      if (secretTitleClickCount >= 3) {
+        secretTitleClickCount = 0;
+        toggleSecretOwnerBox();
+      } else {
+        secretTitleClickTimer = setTimeout(() => {
+          secretTitleClickCount = 0;
+        }, 1200);
+      }
+    });
+  }
+
   async function verifyPin(pin) {
     if (!pin) return false;
     const clean = pin.trim();
@@ -2159,7 +2198,7 @@ function setupEventListeners() {
         currentRole = 'OWNER';
         localStorage.setItem('asorti_user_role', 'OWNER');
         applyRoleUi();
-        showToast('Вход выполнен: Аккаунт Владельцев');
+        showToast('Доступ открыт');
         document.getElementById('accountModal').classList.remove('active');
       } else {
         if (pinErr) pinErr.style.display = 'block';
@@ -2200,7 +2239,7 @@ function setupEventListeners() {
       currentRole = 'AGENT';
       localStorage.setItem('asorti_user_role', 'AGENT');
       applyRoleUi();
-      showToast('Активирован аккаунт Агента (себестоимость скрыта)');
+      showToast('Себестоимость скрыта');
       document.getElementById('accountModal').classList.remove('active');
     });
   }
@@ -2316,10 +2355,8 @@ function applyRoleUi() {
   const badgeText = document.getElementById('accountBadgeText');
   const badgeIcon = document.getElementById('accountBadgeIcon');
   const agentInput = document.getElementById('agentNameInput');
-  const badgeOwnerActive = document.getElementById('badgeOwnerActive');
-  const badgeAgentActive = document.getElementById('badgeAgentActive');
-  const ownerLoggedOutView = document.getElementById('ownerLoggedOutView');
-  const ownerLoggedInView = document.getElementById('ownerLoggedInView');
+  const ownerActiveStateBox = document.getElementById('ownerActiveStateBox');
+  const ownerSecretAuthBox = document.getElementById('ownerSecretAuthBox');
 
   if (currentRole === 'OWNER') {
     document.body.classList.remove('role-agent');
@@ -2327,32 +2364,28 @@ function applyRoleUi() {
     if (badgeBtn) {
       badgeBtn.classList.remove('is-agent');
       badgeBtn.classList.add('is-owner');
-      badgeBtn.title = 'Аккаунт: Владельцы фирмы (3 учредителя)';
+      badgeBtn.title = 'Профиль сотрудника (Учредитель)';
     }
     if (badgeText) badgeText.innerText = 'Владельцы';
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
     }
-    if (badgeOwnerActive) badgeOwnerActive.style.display = 'inline-block';
-    if (badgeAgentActive) badgeAgentActive.style.display = 'none';
-    if (ownerLoggedOutView) ownerLoggedOutView.style.display = 'none';
-    if (ownerLoggedInView) ownerLoggedInView.style.display = 'block';
+    if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'block';
+    if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   } else {
     document.body.classList.remove('role-owner');
     document.body.classList.add('role-agent');
     if (badgeBtn) {
       badgeBtn.classList.remove('is-owner');
       badgeBtn.classList.add('is-agent');
-      badgeBtn.title = 'Аккаунт: Торговый агент';
+      badgeBtn.title = 'Профиль сотрудника';
     }
     if (badgeText) badgeText.innerText = 'Агент: ' + (currentAgentName || 'Javohir');
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     }
-    if (badgeOwnerActive) badgeOwnerActive.style.display = 'none';
-    if (badgeAgentActive) badgeAgentActive.style.display = 'inline-block';
-    if (ownerLoggedOutView) ownerLoggedOutView.style.display = 'block';
-    if (ownerLoggedInView) ownerLoggedInView.style.display = 'none';
+    if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'none';
+    if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   }
 
   if (agentInput && (!agentInput.value || agentInput.value === 'Javohir')) {
@@ -2365,10 +2398,12 @@ function openAccountModal() {
   const agentNameInput = document.getElementById('accountAgentNameInput');
   const ownerPinInput = document.getElementById('ownerPinInput');
   const ownerPinError = document.getElementById('ownerPinError');
+  const ownerSecretAuthBox = document.getElementById('ownerSecretAuthBox');
 
   if (agentNameInput) agentNameInput.value = currentAgentName || 'Javohir';
   if (ownerPinInput) ownerPinInput.value = '';
   if (ownerPinError) ownerPinError.style.display = 'none';
+  if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
 
   applyRoleUi();
   modal.classList.add('active');

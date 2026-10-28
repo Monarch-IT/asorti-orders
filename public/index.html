@@ -52,7 +52,7 @@
       </nav>
 
       <div class="header-right-actions">
-        <button type="button" class="account-badge-btn is-agent" id="btnAccountSwitcher" title="Сменить аккаунт (Владельцы / Агент)">
+        <button type="button" class="account-badge-btn is-agent" id="btnAccountSwitcher" title="Профиль сотрудника">
           <span class="account-badge-icon" id="accountBadgeIcon">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
           </span>
@@ -488,82 +488,45 @@
   </div>
 
   <div id="accountModal" class="modal-overlay">
-    <div class="modal-content" style="max-width: 440px;">
+    <div class="modal-content" style="max-width: 400px;">
       <div class="modal-header">
-        <div class="modal-title">Выбор аккаунта</div>
+        <div class="modal-title" id="accountModalTitle" style="user-select: none; cursor: pointer;">Профиль сотрудника</div>
         <button class="btn-close-modal" id="btnCloseAccountModal">&times;</button>
       </div>
 
-      <div class="account-selector-wrapper">
-        <div class="account-profile-card card-owner" id="accountOwnerSection">
-          <div class="account-card-header">
-            <div class="account-card-title-group">
-              <div class="account-icon-wrap icon-owner">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-              </div>
-              <div>
-                <div class="account-card-title">Владельцы фирмы</div>
-                <div class="account-card-sub">1 общий аккаунт на 3 учредителей</div>
-              </div>
-            </div>
-            <span class="account-status-pill pill-active" id="badgeOwnerActive" style="display: none;">Активен</span>
-          </div>
-
-          <div class="account-card-body">
-            <div class="account-features-text">
-              Полный доступ: себестоимость товаров, расчёт прибыли, отчёт ASORTI и заказ Поставщику.
-            </div>
-
-            <div id="ownerLoggedOutView">
-              <label class="form-label" for="ownerPinInput">Код доступа (PIN):</label>
-              <div style="display: flex; gap: 8px;">
-                <input type="password" id="ownerPinInput" class="form-input" placeholder="Введите код (7693)" maxlength="8">
-                <button type="button" id="btnSubmitAdminPin" class="btn-primary-action" style="width: auto; padding: 0 16px; white-space: nowrap;">
-                  Войти
-                </button>
-              </div>
-              <div id="ownerPinError" style="display: none; color: #dc2626; font-size: 11px; margin-top: 5px; font-weight: 600;">Неверный код доступа</div>
-            </div>
-
-            <div id="ownerLoggedInView" style="display: none;">
-              <div class="owner-active-notice">
-                Себестоимость и аналитика открыты.
-              </div>
-              <button type="button" id="btnExitAdminMode" class="btn-secondary-action" style="width: 100%;">
-                Выйти в режим Агента
-              </button>
-            </div>
-          </div>
+      <div class="account-agent-form">
+        <div class="form-group" style="margin-bottom: 12px;">
+          <label class="form-label" for="accountAgentNameInput">Имя торгового представителя:</label>
+          <input type="text" id="accountAgentNameInput" class="form-input" placeholder="Например: Javohir">
+          <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Указывается в печатных накладных и актах доставки</div>
         </div>
 
-        <div class="account-profile-card card-agent" id="accountAgentSection">
-          <div class="account-card-header">
-            <div class="account-card-title-group">
-              <div class="account-icon-wrap icon-agent">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-              </div>
-              <div>
-                <div class="account-card-title">Торговые агенты</div>
-                <div class="account-card-sub">Сбор заказов и накладные</div>
-              </div>
-            </div>
-            <span class="account-status-pill pill-active" id="badgeAgentActive">Активен</span>
+        <button type="button" id="btnSaveAgentName" class="btn-primary-action" style="width: 100%; margin-bottom: 8px;">
+          Сохранить
+        </button>
+
+        <div id="ownerActiveStateBox" style="display: none; margin-top: 14px; padding-top: 12px; border-top: 1px dashed #cbd5e1;">
+          <div class="owner-active-notice" style="margin-bottom: 8px;">
+            Режим учредителей активен (себестоимость открыта)
           </div>
+          <button type="button" id="btnExitAdminMode" class="btn-secondary-action" style="width: 100%;">
+            Скрыть себестоимость
+          </button>
+        </div>
 
-          <div class="account-card-body">
-            <div class="account-features-text">
-              Себестоимость товаров скрыта. Цены закупки и прибыль не отображаются.
-            </div>
-
-            <div class="form-group" style="margin-bottom: 10px;">
-              <label class="form-label" for="accountAgentNameInput">Имя торгового представителя (для накладных):</label>
-              <input type="text" id="accountAgentNameInput" class="form-input" placeholder="Например: Javohir">
-            </div>
-
-            <button type="button" id="btnSaveAgentName" class="btn-primary-action" style="width: 100%;">
-              Сохранить имя агента
+        <div id="ownerSecretAuthBox" style="display: none; margin-top: 14px; padding: 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-sm);">
+          <div style="font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px;">Служебный доступ:</div>
+          <div style="display: flex; gap: 6px;">
+            <input type="password" id="ownerPinInput" class="form-input" placeholder="Код доступа" maxlength="8" style="background: #ffffff;">
+            <button type="button" id="btnSubmitAdminPin" class="btn-primary-action" style="width: auto; padding: 0 14px; white-space: nowrap;">
+              Войти
             </button>
           </div>
+          <div id="ownerPinError" style="display: none; color: #dc2626; font-size: 11px; margin-top: 5px; font-weight: 600;">Неверный код доступа</div>
+        </div>
+
+        <div style="text-align: center; margin-top: 16px;">
+          <span id="btnSecretTriggerOwner" style="font-size: 11px; color: #94a3b8; user-select: none; cursor: pointer; letter-spacing: 0.3px;">ASORTI Orders v1.1.2</span>
         </div>
       </div>
     </div>
