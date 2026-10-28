@@ -1,7 +1,7 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.9",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.9/AsortiOrders.apk",
-  "changelog": "• Пополнение базы: ведра Ariel, Persil, Tide 12 кг, Perwoll 10 и 12 кг, Yumoş и Lenor 10 и 12 кг\n• Обновление цен: ведра 10 кг закупка 110 000 сум, шампуни 200 мл - 23 000 сум, 400 мл - 33 000 сум\n• Clear Шампунь: цвета Белый и Синий",
+  "versionCode": 11,
+  "versionName": "1.1.0",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.0/AsortiOrders.apk",
+  "changelog": "• Добавлено 20 новых товаров (Palmolive, Elseve, Pantene, Garnier, Dove, Fairy, Grass, Ракша, Vernel, Иран гель, Perwoll, Ariel Капсулы)\n• Полная палитра цветов и гибридных ароматов для Yumoş (14 цветов/оттенков)\n• Выбор цветов для Vernel (Бледно-розовый, С кокосом) и Perwoll 1 л (Красный, Чёрный)",
   "forceUpdate": false
 }

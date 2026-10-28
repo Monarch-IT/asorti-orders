@@ -1101,6 +1101,11 @@ body {
 .color-dot-red { background: #ef4444; box-shadow: 0 0 0 2px #fee2e2; }
 .color-dot-white { background: #ffffff; border: 1px solid #cbd5e1; box-shadow: 0 0 0 2px #f1f5f9; }
 .color-dot-black { background: #18181b; box-shadow: 0 0 0 2px #e4e4e7; }
+.color-dot-orange { background: #f97316; box-shadow: 0 0 0 2px #ffedd5; }
+.color-dot-purple { background: #a855f7; box-shadow: 0 0 0 2px #f3e8ff; }
+.color-dot-cyan { background: #06b6d4; box-shadow: 0 0 0 2px #cffafe; }
+.color-dot-maroon { background: #881337; box-shadow: 0 0 0 2px #ffe4e6; }
+.color-dot-gold { background: #d97706; box-shadow: 0 0 0 2px #fef3c7; }
 .color-dot-default { background: #64748b; }
 .color-item-stepper {
   display: inline-flex;

@@ -618,13 +618,18 @@ function renderProductList() {
 function getColorClass(col) {
   if (!col) return 'default';
   const c = col.toLowerCase();
-  if (c.includes('зел')) return 'green';
-  if (c.includes('син')) return 'blue';
-  if (c.includes('жел') || c.includes('жёл')) return 'yellow';
-  if (c.includes('роз')) return 'pink';
-  if (c.includes('крас')) return 'red';
-  if (c.includes('бел')) return 'white';
-  if (c.includes('чер') || c.includes('чёр')) return 'black';
+  if (c.includes('бирюз') || c.includes('голуб') || c.includes('cyan')) return 'cyan';
+  if (c.includes('зел') || c.includes('лотос') || c.includes('lotus') || c.includes('green')) return 'green';
+  if (c.includes('син') || c.includes('лилия') || c.includes('lilyum') || c.includes('blue')) return 'blue';
+  if (c.includes('жел') || c.includes('жёл') || c.includes('hanimeli') || c.includes('жимолость') || c.includes('yellow')) return 'yellow';
+  if (c.includes('золот') || c.includes('gold')) return 'gold';
+  if (c.includes('оранж') || c.includes('янт') || c.includes('amber') || c.includes('orange')) return 'orange';
+  if (c.includes('борд') || c.includes('maroon')) return 'maroon';
+  if (c.includes('фиол') || c.includes('лав') || c.includes('сирен') || c.includes('пурпур') || c.includes('purple')) return 'purple';
+  if (c.includes('роз') || c.includes('пион') || c.includes('sakura') || c.includes('сакур') || c.includes('pink')) return 'pink';
+  if (c.includes('крас') || c.includes('орхид') || c.includes('orkide') || c.includes('red')) return 'red';
+  if (c.includes('бел') || c.includes('кокос') || c.includes('ваниль') || c.includes('white')) return 'white';
+  if (c.includes('чер') || c.includes('чёр') || c.includes('black') || c.includes('siyah')) return 'black';
   return 'default';
 }
 
