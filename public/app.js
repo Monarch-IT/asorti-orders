@@ -7,10 +7,20 @@ let currentAddress = '';
 let selectedOrder = null;
 let allOrders = [];
 
+let currentRole = localStorage.getItem('asorti_user_role') || 'AGENT';
+let currentAgentName = localStorage.getItem('asorti_agent_name') || 'Javohir';
+const MASTER_PIN_HASH = '93352a86094a964ef548e72c79a9f6187b7f561773c31f3371e86ecffe9a4dd9';
+
 let createMap = null;
 let createMarker = null;
 let modalMap = null;
 let modalMarker = null;
+
+let deliveryMapInstance = null;
+let deliveryMarkersLayer = null;
+let deliveryRoutePolyline = null;
+let selectedDeliveryDate = '';
+let currentRouteStops = [];
 
 const SUPABASE_URL = 'https://yzwwoahgynzvcnsvqmrr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_H2t-F2IAZnKPeMEMFiYH-g_USbzXscM';
@@ -18,11 +28,13 @@ let supabaseClient = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   initSupabase();
+  initUserRoles();
   initDateInputs();
   initNavigation();
   initMapWidgets();
   initGeolocation();
   initOfflineSync();
+  initDeliveryMap();
   loadProducts();
   loadOrders();
   setupEventListeners();
@@ -115,21 +127,49 @@ function mapFromDb(row) {
   };
 }
 
-function getDeletedAuditLog() {
-  try {
-    return JSON.parse(localStorage.getItem('orders_deleted_audit_log') || '[]');
-  } catch (e) {
-    return [];
-  }
+function isTestOrder(order) {
+  if (!order) return true;
+  const store = String(order.storeName || order.store_name || '').trim();
+  const num = String(order.orderNumber || order.order_number || '').trim();
+  const amt = Number(order.totalAmount !== undefined ? order.totalAmount : (order.total_amount || 0));
+  if (store === '12345' || store === '54321' || store === '15667') return true;
+  if ((num === '000000' || !num) && amt === 0) return true;
+  if (store.includes('12345') || store.includes('54321') || store.includes('15667')) return true;
+  return false;
 }
 
-function saveDeletedAuditLog(log) {
-  localStorage.setItem('orders_deleted_audit_log', JSON.stringify(log));
+function purgeTestOrders() {
+  try {
+    const rawLocal = localStorage.getItem('cached_all_orders');
+    if (rawLocal) {
+      const parsed = JSON.parse(rawLocal);
+      if (Array.isArray(parsed)) {
+        const cleaned = parsed.filter(o => !isTestOrder(o));
+        localStorage.setItem('cached_all_orders', JSON.stringify(cleaned));
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const rawQueue = localStorage.getItem('offline_order_queue');
+    if (rawQueue) {
+      const parsedQ = JSON.parse(rawQueue);
+      if (Array.isArray(parsedQ)) {
+        const cleanedQ = parsedQ.filter(item => !isTestOrder(item.payload));
+        localStorage.setItem('offline_order_queue', JSON.stringify(cleanedQ));
+      }
+    }
+  } catch (e) {}
+
+  try {
+    localStorage.removeItem('orders_deleted_audit_log');
+  } catch (e) {}
 }
 
 function getOfflineQueue() {
   try {
-    return JSON.parse(localStorage.getItem('offline_order_queue') || '[]');
+    const q = JSON.parse(localStorage.getItem('offline_order_queue') || '[]');
+    return Array.isArray(q) ? q.filter(item => !isTestOrder(item.payload)) : [];
   } catch (e) {
     return [];
   }
@@ -141,14 +181,16 @@ function saveOfflineQueue(q) {
 
 function getLocalOrders() {
   try {
-    return JSON.parse(localStorage.getItem('cached_all_orders') || '[]');
+    const list = JSON.parse(localStorage.getItem('cached_all_orders') || '[]');
+    return Array.isArray(list) ? list.filter(o => !isTestOrder(o)) : [];
   } catch (e) {
     return [];
   }
 }
 
 function saveLocalOrders(orders) {
-  localStorage.setItem('cached_all_orders', JSON.stringify(orders));
+  const safe = Array.isArray(orders) ? orders.filter(o => !isTestOrder(o)) : [];
+  localStorage.setItem('cached_all_orders', JSON.stringify(safe));
 }
 
 function initOfflineSync() {
@@ -279,13 +321,15 @@ function setCreateMapLocation(lat, lng) {
   }, 200);
 }
 
-function showModalOrderMap(lat, lng) {
+function showModalOrderMap(lat, lng, storeName, address) {
   const container = document.getElementById('modalMapBox');
-  if (!lat || !lng) {
-    container.style.display = 'none';
-    return;
-  }
+  if (!container) return;
   container.style.display = 'block';
+
+  const defaultLat = 41.3111;
+  const defaultLng = 69.2797;
+  const useLat = (lat && !isNaN(lat)) ? Number(lat) : defaultLat;
+  const useLng = (lng && !isNaN(lng)) ? Number(lng) : defaultLng;
 
   setTimeout(() => {
     try {
@@ -293,22 +337,28 @@ function showModalOrderMap(lat, lng) {
         modalMap = L.map('modalOrderMap', {
           zoomControl: true,
           attributionControl: false
-        }).setView([lat, lng], 15);
+        }).setView([useLat, useLng], 15);
 
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
           maxZoom: 19
         }).addTo(modalMap);
 
-        modalMarker = L.marker([lat, lng]).addTo(modalMap);
+        modalMarker = L.marker([useLat, useLng]).addTo(modalMap);
       } else {
-        modalMap.setView([lat, lng], 15);
-        modalMarker.setLatLng([lat, lng]);
+        modalMap.setView([useLat, useLng], 15);
+        modalMarker.setLatLng([useLat, useLng]);
       }
+      const title = storeName || 'Магазин';
+      const addr = address || '';
+      modalMarker.bindPopup('<b>' + title + '</b>' + (addr ? '<br>' + addr : '')).openPopup();
       modalMap.invalidateSize();
+      setTimeout(() => {
+        if (modalMap) modalMap.invalidateSize();
+      }, 300);
     } catch (e) {
       console.warn('Modal map error:', e);
     }
-  }, 200);
+  }, 120);
 }
 
 async function reverseGeocode(lat, lon) {
@@ -355,6 +405,37 @@ async function reverseGeocode(lat, lon) {
   applyLocationUi(lat, lon, currentAddress, false);
 }
 
+window.openInNavigator = function(lat, lng, label) {
+  if (!lat || !lng) {
+    showToast('Координаты точки не указаны');
+    return;
+  }
+  const useLat = Number(lat);
+  const useLng = Number(lng);
+  if (isNaN(useLat) || isNaN(useLng)) {
+    showToast('Некорректные координаты');
+    return;
+  }
+  if (window.OrdersNative && typeof window.OrdersNative.openYandexNavigator === 'function') {
+    window.OrdersNative.openYandexNavigator(useLat, useLng, label || 'Магазин');
+    return;
+  }
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    const naviUrl = 'yandexnavi://build_route_on_map?lat_to=' + useLat + '&lon_to=' + useLng;
+    const webFallback = 'https://yandex.ru/maps/?rtext=~' + useLat + ',' + useLng + '&rtt=auto';
+    const start = Date.now();
+    window.location.href = naviUrl;
+    setTimeout(() => {
+      if (Date.now() - start < 1500) {
+        window.open(webFallback, '_blank');
+      }
+    }, 800);
+  } else {
+    window.open('https://yandex.ru/maps/?rtext=~' + useLat + ',' + useLng + '&rtt=auto', '_blank');
+  }
+};
+
 function applyLocationUi(lat, lon, addressStr, moveMap = true) {
   const btn = document.getElementById('btnGetLocation');
   const btnText = document.getElementById('btnLocationText');
@@ -373,6 +454,10 @@ function applyLocationUi(lat, lon, addressStr, moveMap = true) {
   currentCoords = { lat, lng: lon };
 
   yandexBar.style.display = 'flex';
+  yandexNavBtn.onclick = (e) => {
+    e.preventDefault();
+    window.openInNavigator(lat, lon, addressStr);
+  };
   yandexNavBtn.href = 'https://yandex.ru/maps/?rtext=~' + lat + ',' + lon + '&rtt=auto';
 
   if (moveMap) {
@@ -483,6 +568,10 @@ function switchTab(tabId) {
     setTimeout(() => createMap.invalidateSize(), 200);
   }
 
+  if (tabId === 'tab-map') {
+    renderDeliveryRouteMap();
+  }
+
   if (tabId === 'tab-control' || tabId === 'tab-history') {
     loadOrders();
   }
@@ -544,9 +633,89 @@ function initGeolocation() {
   });
 }
 
+function levenshteinDistance(s1, s2) {
+  if (s1 === s2) return 0;
+  if (!s1.length) return s2.length;
+  if (!s2.length) return s1.length;
+  const d = [];
+  for (let i = 0; i <= s1.length; i++) d[i] = [i];
+  for (let j = 0; j <= s2.length; j++) d[0][j] = j;
+  for (let i = 1; i <= s1.length; i++) {
+    for (let j = 1; j <= s2.length; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(
+        d[i - 1][j] + 1,
+        d[i][j - 1] + 1,
+        d[i - 1][j - 1] + cost
+      );
+    }
+  }
+  return d[s1.length][s2.length];
+}
+
+function cleanFuzzyString(str) {
+  if (!str) return '';
+  return str.toLowerCase()
+    .replace(/ё/g, 'е')
+    .replace(/[^a-zа-я0-9\s.,]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function matchProductTokens(product, tokens) {
+  if (!tokens || !tokens.length) return true;
+
+  const rawFull = cleanFuzzyString(product.fullName || '');
+  const rawBrand = cleanFuzzyString(product.brand || '');
+  const rawType = cleanFuzzyString(product.type || '');
+  const rawVolume = cleanFuzzyString(product.volume || '');
+  const rawNote = cleanFuzzyString(product.note || '');
+  const rawCategory = cleanFuzzyString(product.category || '');
+  const colorsText = cleanFuzzyString((product.colors || []).join(' '));
+
+  const combinedSearchText = (rawFull + ' ' + rawBrand + ' ' + rawType + ' ' + rawVolume + ' ' + rawNote + ' ' + rawCategory + ' ' + colorsText);
+  const words = combinedSearchText.split(/\s+/).filter(Boolean);
+
+  const productNumbers = (rawFull + ' ' + rawVolume).match(/\d+([.,]\d+)?/g) || [];
+  const cleanNumbers = productNumbers.map(n => n.replace(',', '.'));
+
+  return tokens.every(token => {
+    const cleanTok = token.replace(/ё/g, 'е');
+
+    if (combinedSearchText.includes(cleanTok)) {
+      return true;
+    }
+
+    const tokenNum = cleanTok.replace(',', '.').replace(/[^0-9.]/g, '');
+    if (tokenNum) {
+      if (cleanNumbers.includes(tokenNum) || rawVolume.includes(tokenNum) || rawFull.includes(tokenNum)) {
+        return true;
+      }
+    }
+
+    if (cleanTok.length >= 2) {
+      if (words.some(w => w.startsWith(cleanTok))) {
+        return true;
+      }
+    }
+
+    if (cleanTok.length >= 3) {
+      const maxDist = cleanTok.length <= 4 ? 1 : 2;
+      const foundFuzzy = words.some(w => {
+        if (Math.abs(w.length - cleanTok.length) > maxDist) return false;
+        return levenshteinDistance(w, cleanTok) <= maxDist;
+      });
+      if (foundFuzzy) return true;
+    }
+
+    return false;
+  });
+}
+
 async function loadProducts() {
   if (window.EMBEDDED_PRODUCTS && Array.isArray(window.EMBEDDED_PRODUCTS) && window.EMBEDDED_PRODUCTS.length > 0) {
     allProducts = window.EMBEDDED_PRODUCTS;
+    updateProductCountBadge();
     filterAndRenderProducts();
   }
 
@@ -556,27 +725,34 @@ async function loadProducts() {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
         allProducts = data;
+        updateProductCountBadge();
         filterAndRenderProducts();
       }
     }
   } catch (err) {
     if (!allProducts.length && window.EMBEDDED_PRODUCTS) {
       allProducts = window.EMBEDDED_PRODUCTS;
+      updateProductCountBadge();
       filterAndRenderProducts();
     }
+  }
+}
+
+function updateProductCountBadge() {
+  const badge = document.getElementById('productsTotalCountBadge');
+  if (badge && allProducts.length) {
+    badge.innerText = allProducts.length;
   }
 }
 
 function filterAndRenderProducts() {
   const searchInput = document.getElementById('productSearchInput');
   const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+  const tokens = query ? query.split(/\s+/).filter(Boolean) : [];
 
   filteredProducts = allProducts.filter(p => {
     const matchCat = (currentCategory === 'ALL') || (p.category === currentCategory);
-    const matchSearch = !query ||
-      p.fullName.toLowerCase().includes(query) ||
-      p.brand.toLowerCase().includes(query) ||
-      p.category.toLowerCase().includes(query);
+    const matchSearch = matchProductTokens(p, tokens);
     return matchCat && matchSearch;
   });
 
@@ -596,9 +772,11 @@ function renderProductList() {
     const colorsTag = (p.colors && p.colors.length) ?
       '<div class="item-colors-badge"> Цвета: ' + p.colors.join(', ') + '</div>' : '';
 
+    const catLabel = p.category === 'КАПСУЛЫ ДЛЯ СТИРКИ' ? 'Капсулы' : p.category.split(' ')[0];
+
     return '<div class="product-row-item">' +
       '<div class="item-left">' +
-      '<span class="item-category-tag">' + p.category.split(' ')[0] + '</span>' +
+      '<span class="item-category-tag">' + catLabel + '</span>' +
       '<div class="item-title">' + p.fullName + '</div>' +
       '<div class="item-meta">' + (p.volume || '') + ' ' + (p.note ? '• ' + p.note : '') + colorsTag + '</div>' +
       '<div class="item-price">' + formatPrice(p.price) + ' сум</div>' +
@@ -879,7 +1057,7 @@ async function submitOrder() {
     ownerPhone: ownerPhone,
     address: chosenAddress,
     coords: currentCoords,
-    agentName: 'Javohir',
+    agentName: (document.getElementById('agentNameInput') ? document.getElementById('agentNameInput').value.trim() : '') || currentAgentName || 'Javohir',
     agentPhone: '',
     status: 'planned',
     createdAt: new Date().toISOString(),
@@ -955,6 +1133,7 @@ async function submitOrder() {
 }
 
 async function loadOrders() {
+  purgeTestOrders();
   try {
     let rows = null;
     if (supabaseClient) {
@@ -973,9 +1152,9 @@ async function loadOrders() {
     }
 
     if (rows && Array.isArray(rows)) {
-      const dbOrders = rows.map(mapFromDb);
+      const dbOrders = rows.map(mapFromDb).filter(o => !isTestOrder(o));
       const offlineQueue = getOfflineQueue();
-      const offlineOrders = offlineQueue.map(q => q.payload).filter(Boolean);
+      const offlineOrders = offlineQueue.map(q => q.payload).filter(Boolean).filter(o => !isTestOrder(o));
 
       const combined = [...offlineOrders];
       dbOrders.forEach(o => {
@@ -983,7 +1162,7 @@ async function loadOrders() {
           combined.push(o);
         }
       });
-      allOrders = combined;
+      allOrders = combined.filter(o => !isTestOrder(o));
       saveLocalOrders(allOrders);
     } else {
       allOrders = getLocalOrders();
@@ -1003,7 +1182,7 @@ function renderControlOrders() {
   const countBadge = document.getElementById('controlOrdersCount');
   if (!container) return;
 
-  const controlOrders = allOrders.filter(o => !o.dismissedFromControl);
+  const controlOrders = allOrders.filter(o => !o.dismissedFromControl && !isTestOrder(o));
   countBadge.innerText = controlOrders.length + ' накладных';
 
   if (!controlOrders.length) {
@@ -1019,35 +1198,9 @@ function renderHistoryOrders(filterStatus) {
   const container = document.getElementById('historyOrdersList');
   if (!container) return;
 
-  if (currentHistoryFilter === 'deleted') {
-    const auditLog = getDeletedAuditLog();
-    if (!auditLog.length) {
-      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 30px;">Журнал удалений пуст.</div>';
-      return;
-    }
-    container.innerHTML = auditLog.map(entry => {
-      return '<div class="order-card deleted-order-card">' +
-        '<div class="order-card-header">' +
-        '<div class="order-num" style="text-decoration: line-through; color: #dc2626;">№ ' + entry.orderNumber + '</div>' +
-        '<span class="badge-status badge-deleted">УДАЛЁН</span>' +
-        '</div>' +
-        '<div class="deleted-audit-msg">Удалили заказ № ' + entry.orderNumber + ' (' + entry.storeName + ')</div>' +
-        '<div class="order-store-title">' + entry.storeName + '</div>' +
-        '<div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;">' +
-        'Сумма: <strong>' + formatPrice(entry.totalAmount) + ' сум</strong> | Дата доставки: ' + entry.deliveryDate +
-        '</div>' +
-        '<div class="deleted-audit-footer">' +
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' +
-        '<span>Время удаления: <strong>' + entry.deletedTime + '</strong>, число: <strong>' + entry.deletedDate + '</strong></span>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-    return;
-  }
-
-  let filtered = allOrders;
+  let filtered = allOrders.filter(o => !isTestOrder(o));
   if (currentHistoryFilter !== 'ALL') {
-    filtered = allOrders.filter(o => o.status === currentHistoryFilter);
+    filtered = filtered.filter(o => o.status === currentHistoryFilter);
   }
 
   if (!filtered.length) {
@@ -1077,7 +1230,7 @@ function createOrderCardHtml(order, isControlTab) {
 
   const actionBtnHtml = isControlTab
     ? '<button type="button" class="btn-order-dismiss" onclick="dismissOrderFromControl(\'' + order.id + '\', event)">Убрать из контроля</button>'
-    : '<button type="button" class="btn-order-delete-history" onclick="deleteOrderFromHistory(\'' + order.id + '\', event)">Удалить</button>';
+    : '';
 
   return '<div class="order-card">' +
     '<div class="order-card-header">' +
@@ -1150,66 +1303,8 @@ window.dismissOrderFromControl = async function (orderId, evt) {
   }
 };
 
-window.deleteOrderFromHistory = async function (orderId, evt) {
-  if (evt) evt.stopPropagation();
-  const order = allOrders.find(x => x.id === orderId);
-  if (!order) return;
-
-  const confirmed = confirm('ВНИМАНИЕ! Вы действительно хотите удалить заказ № ' + order.orderNumber + ' (' + order.storeName + ') из Истории? Запись об удалении будет зафиксирована в журнале с датой и временем.');
-  if (!confirmed) return;
-
-  const now = new Date();
-  const pad = n => String(n).padStart(2, '0');
-  const delDate = pad(now.getDate()) + '.' + pad(now.getMonth() + 1) + '.' + now.getFullYear();
-  const delTime = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
-
-  try {
-    const auditEntry = {
-      id: 'del_' + Date.now(),
-      orderId: order.id,
-      orderNumber: order.orderNumber,
-      storeName: order.storeName,
-      deliveryDate: order.deliveryDate ? order.deliveryDate.split('-').reverse().join('.') : '-',
-      totalAmount: order.totalAmount,
-      ownerName: order.ownerName || '',
-      ownerPhone: order.ownerPhone || '',
-      deletedDate: delDate,
-      deletedTime: delTime,
-      deletedTimestamp: Date.now()
-    };
-    const auditLog = getDeletedAuditLog();
-    auditLog.unshift(auditEntry);
-    saveDeletedAuditLog(auditLog);
-
-    if (supabaseClient) {
-      await supabaseClient.from('orders').delete().eq('id', orderId);
-    } else {
-      await fetch(SUPABASE_URL + '/rest/v1/orders?id=eq.' + orderId, {
-        method: 'DELETE',
-        headers: {
-          'apikey': SUPABASE_KEY,
-          'Authorization': 'Bearer ' + SUPABASE_KEY
-        }
-      });
-    }
-
-    allOrders = allOrders.filter(o => o.id !== orderId);
-    saveLocalOrders(allOrders);
-
-    showToast('Удалили заказ № ' + order.orderNumber + ' (' + delDate + ' ' + delTime + ')');
-    renderControlOrders();
-    renderHistoryOrders(currentHistoryFilter);
-
-    const modal = document.getElementById('orderDetailModal');
-    if (modal.classList.contains('active') && selectedOrder && selectedOrder.id === orderId) {
-      modal.classList.remove('active');
-    }
-  } catch (err) {
-    alert(err.message);
-  }
-};
-
-window.deleteOrderById = window.deleteOrderFromHistory;
+window.deleteOrderFromHistory = function () {};
+window.deleteOrderById = function () {};
 
 function openOrderModal(order) {
   selectedOrder = order;
@@ -1232,14 +1327,33 @@ function openOrderModal(order) {
 
   const yandexNavContainer = document.getElementById('modalYandexNavContainer');
   const yandexNavLink = document.getElementById('modalYandexNavLink');
-  if (order.coords && order.coords.lat) {
+  if (order.coords && order.coords.lat && order.coords.lng) {
     yandexNavContainer.style.display = 'block';
+    yandexNavLink.onclick = (e) => {
+      e.preventDefault();
+      window.openInNavigator(order.coords.lat, order.coords.lng, order.storeName);
+    };
     yandexNavLink.href = 'https://yandex.ru/maps/?rtext=~' + order.coords.lat + ',' + order.coords.lng + '&rtt=auto';
-    showModalOrderMap(order.coords.lat, order.coords.lng);
+    showModalOrderMap(order.coords.lat, order.coords.lng, order.storeName, order.address);
   } else {
     yandexNavContainer.style.display = 'none';
-    showModalOrderMap(null, null);
+    showModalOrderMap(null, null, order.storeName, order.address);
   }
+
+  let orderCost = 0;
+  (order.items || []).forEach(item => {
+    let costPrice = Number(item.costPrice);
+    if (!costPrice || isNaN(costPrice)) {
+      const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
+      costPrice = found ? Number(found.costPrice) || 0 : 0;
+    }
+    orderCost += ((Number(item.quantity) || 1) * costPrice);
+  });
+  const orderProfit = Math.max(0, (order.totalAmount || 0) - orderCost);
+  const costSumEl = document.getElementById('modalOwnerCostSum');
+  const profitSumEl = document.getElementById('modalOwnerProfitSum');
+  if (costSumEl) costSumEl.innerText = formatPrice(orderCost) + ' сум';
+  if (profitSumEl) profitSumEl.innerText = formatPrice(orderProfit) + ' сум';
 
   const itemsContainer = document.getElementById('modalItemsList');
   itemsContainer.innerHTML = (order.items || []).map(i =>
@@ -1910,12 +2024,6 @@ function setupEventListeners() {
     });
   }
 
-  const btnDeleteModal = document.getElementById('btnDeleteModalOrder');
-  if (btnDeleteModal) {
-    btnDeleteModal.addEventListener('click', () => {
-      if (selectedOrder) deleteOrderFromHistory(selectedOrder.id);
-    });
-  }
 
   document.getElementById('btnMarkPlanned').addEventListener('click', () => updateOrderStatus('planned'));
   document.getElementById('btnMarkDelivered').addEventListener('click', () => updateOrderStatus('delivered'));
@@ -1967,7 +2075,514 @@ function setupEventListeners() {
   if (btnUpdateMob) {
     btnUpdateMob.addEventListener('click', requestAppUpdate);
   }
+
+  const btnAccountSwitcher = document.getElementById('btnAccountSwitcher');
+  if (btnAccountSwitcher) {
+    btnAccountSwitcher.addEventListener('click', openAccountModal);
+  }
+
+  const btnCloseAccount = document.getElementById('btnCloseAccountModal');
+  if (btnCloseAccount) {
+    btnCloseAccount.addEventListener('click', () => {
+      document.getElementById('accountModal').classList.remove('active');
+    });
+  }
+
+  const btnToggleAdmin = document.getElementById('btnToggleAdminBox');
+  if (btnToggleAdmin) {
+    btnToggleAdmin.addEventListener('click', () => {
+      const box = document.getElementById('adminPinBox');
+      if (box) box.style.display = box.style.display === 'none' ? 'block' : 'none';
+    });
+  }
+
+  async function verifyPin(pin) {
+    if (!pin) return false;
+    try {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(pin.trim());
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+      return hashHex === MASTER_PIN_HASH;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  const btnSubmitPin = document.getElementById('btnSubmitAdminPin');
+  if (btnSubmitPin) {
+    btnSubmitPin.addEventListener('click', async () => {
+      const pinInput = document.getElementById('ownerPinInput');
+      const val = (pinInput ? pinInput.value : '').trim();
+      const isMatch = await verifyPin(val);
+      if (isMatch) {
+        currentRole = 'OWNER';
+        localStorage.setItem('asorti_user_role', 'OWNER');
+        applyRoleUi();
+        showToast('Режим администратора активирован');
+        document.getElementById('accountModal').classList.remove('active');
+      } else {
+        showToast('Неверный код доступа');
+        if (pinInput) pinInput.focus();
+      }
+    });
+  }
+
+  const btnSaveAgent = document.getElementById('btnSaveAgentName');
+  if (btnSaveAgent) {
+    btnSaveAgent.addEventListener('click', () => {
+      const inp = document.getElementById('accountAgentNameInput');
+      const val = (inp ? inp.value : '').trim() || 'Javohir';
+      currentAgentName = val;
+      localStorage.setItem('asorti_agent_name', val);
+      const stepInput = document.getElementById('agentNameInput');
+      if (stepInput) stepInput.value = val;
+      applyRoleUi();
+      showToast('Имя сохранено: ' + val);
+      document.getElementById('accountModal').classList.remove('active');
+    });
+  }
+
+  const btnSaveOwnerAgent = document.getElementById('btnSaveOwnerAgentName');
+  if (btnSaveOwnerAgent) {
+    btnSaveOwnerAgent.addEventListener('click', () => {
+      const inp = document.getElementById('ownerAgentNameInput');
+      const val = (inp ? inp.value : '').trim() || 'Javohir';
+      currentAgentName = val;
+      localStorage.setItem('asorti_agent_name', val);
+      const stepInput = document.getElementById('agentNameInput');
+      if (stepInput) stepInput.value = val;
+      applyRoleUi();
+      showToast('Имя сохранено: ' + val);
+      document.getElementById('accountModal').classList.remove('active');
+    });
+  }
+
+  const btnExitAdmin = document.getElementById('btnExitAdminMode');
+  if (btnExitAdmin) {
+    btnExitAdmin.addEventListener('click', () => {
+      currentRole = 'AGENT';
+      localStorage.setItem('asorti_user_role', 'AGENT');
+      applyRoleUi();
+      showToast('Режим агента включен');
+      document.getElementById('accountModal').classList.remove('active');
+    });
+  }
+
+  const agentNameInput = document.getElementById('agentNameInput');
+  if (agentNameInput) {
+    agentNameInput.addEventListener('input', () => {
+      const val = agentNameInput.value.trim();
+      if (val) {
+        currentAgentName = val;
+        localStorage.setItem('asorti_agent_name', val);
+        applyRoleUi();
+      }
+    });
+  }
+
+  const btnOpenMapCtrl = document.getElementById('btnOpenMapFromControl');
+  if (btnOpenMapCtrl) {
+    btnOpenMapCtrl.addEventListener('click', () => {
+      switchTab('tab-map');
+    });
+  }
+
+  const mapDateInput = document.getElementById('mapDateInput');
+  if (mapDateInput) {
+    mapDateInput.addEventListener('change', () => {
+      selectedDeliveryDate = mapDateInput.value;
+      renderDeliveryRouteMap();
+    });
+  }
+
+  const btnMapPrev = document.getElementById('btnMapPrevDate');
+  if (btnMapPrev) {
+    btnMapPrev.addEventListener('click', () => {
+      if (!selectedDeliveryDate) selectedDeliveryDate = getTodayDate();
+      const d = new Date(selectedDeliveryDate);
+      d.setDate(d.getDate() - 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      selectedDeliveryDate = yyyy + '-' + mm + '-' + dd;
+      if (mapDateInput) mapDateInput.value = selectedDeliveryDate;
+      renderDeliveryRouteMap();
+    });
+  }
+
+  const btnMapNext = document.getElementById('btnMapNextDate');
+  if (btnMapNext) {
+    btnMapNext.addEventListener('click', () => {
+      if (!selectedDeliveryDate) selectedDeliveryDate = getTodayDate();
+      const d = new Date(selectedDeliveryDate);
+      d.setDate(d.getDate() + 1);
+      const yyyy = d.getFullYear();
+      const mm = String(d.getMonth() + 1).padStart(2, '0');
+      const dd = String(d.getDate()).padStart(2, '0');
+      selectedDeliveryDate = yyyy + '-' + mm + '-' + dd;
+      if (mapDateInput) mapDateInput.value = selectedDeliveryDate;
+      renderDeliveryRouteMap();
+    });
+  }
+
+  const btnMapToday = document.getElementById('btnMapTodayDate');
+  if (btnMapToday) {
+    btnMapToday.addEventListener('click', () => {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      selectedDeliveryDate = yyyy + '-' + mm + '-' + dd;
+      if (mapDateInput) mapDateInput.value = selectedDeliveryDate;
+      renderDeliveryRouteMap();
+    });
+  }
+
+  const btnOptimize = document.getElementById('btnOptimizeRoute');
+  if (btnOptimize) {
+    btnOptimize.addEventListener('click', optimizeDeliveryRoute);
+  }
 }
+
+function initUserRoles() {
+  applyRoleUi();
+}
+
+function applyRoleUi() {
+  const badgeBtn = document.getElementById('btnAccountSwitcher');
+  const badgeText = document.getElementById('accountBadgeText');
+  const agentInput = document.getElementById('agentNameInput');
+
+  if (currentRole === 'OWNER') {
+    document.body.classList.remove('role-agent');
+    if (badgeBtn) {
+      badgeBtn.classList.remove('is-agent');
+      badgeBtn.title = 'Панель администратора';
+    }
+    if (badgeText) badgeText.innerText = 'Администратор';
+  } else {
+    document.body.classList.add('role-agent');
+    if (badgeBtn) {
+      badgeBtn.classList.add('is-agent');
+      badgeBtn.title = 'Профиль сотрудника';
+    }
+    if (badgeText) badgeText.innerText = 'Агент: ' + (currentAgentName || 'Агент');
+  }
+
+  if (agentInput && (!agentInput.value || agentInput.value === 'Javohir')) {
+    agentInput.value = currentAgentName || 'Javohir';
+  }
+}
+
+function openAccountModal() {
+  const modal = document.getElementById('accountModal');
+  const title = document.getElementById('accountModalTitle');
+  const agentView = document.getElementById('accountModalAgentView');
+  const ownerView = document.getElementById('accountModalOwnerView');
+  const agentNameInput = document.getElementById('accountAgentNameInput');
+  const ownerAgentNameInput = document.getElementById('ownerAgentNameInput');
+  const adminPinBox = document.getElementById('adminPinBox');
+  const ownerPinInput = document.getElementById('ownerPinInput');
+
+  if (currentRole === 'OWNER') {
+    if (title) title.innerText = 'Панель администратора';
+    if (agentView) agentView.style.display = 'none';
+    if (ownerView) ownerView.style.display = 'block';
+    if (ownerAgentNameInput) ownerAgentNameInput.value = currentAgentName;
+  } else {
+    if (title) title.innerText = 'Профиль сотрудника';
+    if (agentView) agentView.style.display = 'block';
+    if (ownerView) ownerView.style.display = 'none';
+    if (adminPinBox) adminPinBox.style.display = 'none';
+    if (ownerPinInput) ownerPinInput.value = '';
+    if (agentNameInput) agentNameInput.value = currentAgentName;
+  }
+
+  modal.classList.add('active');
+}
+
+function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+function solveNearestNeighborTsp(points) {
+  if (points.length <= 1) return points.slice();
+  const unvisited = points.slice();
+  const route = [];
+  const baseLat = 41.3111;
+  const baseLng = 69.2797;
+
+  let currentLat = baseLat;
+  let currentLng = baseLng;
+
+  while (unvisited.length > 0) {
+    let nearestIdx = 0;
+    let minDist = Infinity;
+    for (let i = 0; i < unvisited.length; i++) {
+      const p = unvisited[i];
+      const pLat = (p.coords && p.coords.lat) ? Number(p.coords.lat) : baseLat;
+      const pLng = (p.coords && p.coords.lng) ? Number(p.coords.lng) : baseLng;
+      const dist = calculateHaversineDistance(currentLat, currentLng, pLat, pLng);
+      if (dist < minDist) {
+        minDist = dist;
+        nearestIdx = i;
+      }
+    }
+    const [nextStop] = unvisited.splice(nearestIdx, 1);
+    route.push(nextStop);
+    currentLat = (nextStop.coords && nextStop.coords.lat) ? Number(nextStop.coords.lat) : baseLat;
+    currentLng = (nextStop.coords && nextStop.coords.lng) ? Number(nextStop.coords.lng) : baseLng;
+  }
+  return route;
+}
+
+function initDeliveryMap() {
+  const mapInput = document.getElementById('mapDateInput');
+  if (mapInput && !mapInput.value) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    selectedDeliveryDate = yyyy + '-' + mm + '-' + dd;
+    mapInput.value = selectedDeliveryDate;
+  }
+}
+
+function renderDeliveryRouteMap() {
+  const mapInput = document.getElementById('mapDateInput');
+  if (mapInput && mapInput.value) {
+    selectedDeliveryDate = mapInput.value;
+  } else if (!selectedDeliveryDate) {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    selectedDeliveryDate = yyyy + '-' + mm + '-' + dd;
+    if (mapInput) mapInput.value = selectedDeliveryDate;
+  }
+
+  const dayOrders = allOrders.filter(o => o.deliveryDate === selectedDeliveryDate && o.status !== 'deleted');
+
+  const statTotal = document.getElementById('mapStatTotal');
+  const statPlanned = document.getElementById('mapStatPlanned');
+  const statDelivered = document.getElementById('mapStatDelivered');
+  const statCancelled = document.getElementById('mapStatCancelled');
+  const statSum = document.getElementById('mapStatSum');
+
+  const countTotal = dayOrders.length;
+  const countPlanned = dayOrders.filter(o => o.status === 'planned' || !o.status).length;
+  const countDelivered = dayOrders.filter(o => o.status === 'delivered').length;
+  const countCancelled = dayOrders.filter(o => o.status === 'cancelled').length;
+  const sumTotal = dayOrders.reduce((acc, o) => acc + (Number(o.totalAmount) || 0), 0);
+
+  if (statTotal) statTotal.innerText = '' + countTotal;
+  if (statPlanned) statPlanned.innerText = '' + countPlanned;
+  if (statDelivered) statDelivered.innerText = '' + countDelivered;
+  if (statCancelled) statCancelled.innerText = '' + countCancelled;
+  if (statSum) statSum.innerText = formatPrice(sumTotal) + ' сум';
+
+  const routeInfo = document.getElementById('routeInfoBanner');
+  if (routeInfo) routeInfo.style.display = 'none';
+  const btnMultiYandex = document.getElementById('btnOpenYandexRouteMulti');
+  if (btnMultiYandex) btnMultiYandex.style.display = 'none';
+
+  if (!deliveryMapInstance) {
+    deliveryMapInstance = L.map('deliveryMainMap', {
+      zoomControl: true,
+      attributionControl: false
+    }).setView([41.3111, 69.2797], 12);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19
+    }).addTo(deliveryMapInstance);
+
+    deliveryMarkersLayer = L.layerGroup().addTo(deliveryMapInstance);
+  } else {
+    deliveryMarkersLayer.clearLayers();
+    if (deliveryRoutePolyline) {
+      deliveryMapInstance.removeLayer(deliveryRoutePolyline);
+      deliveryRoutePolyline = null;
+    }
+  }
+
+  currentRouteStops = dayOrders.slice();
+
+  renderMarkersAndStopList(currentRouteStops, false);
+
+  setTimeout(() => {
+    if (deliveryMapInstance) deliveryMapInstance.invalidateSize();
+  }, 200);
+}
+
+function renderMarkersAndStopList(ordersList, isOptimized) {
+  if (!deliveryMarkersLayer) return;
+  deliveryMarkersLayer.clearLayers();
+
+  const bounds = [];
+  const baseLat = 41.3111;
+  const baseLng = 69.2797;
+
+  ordersList.forEach((order, idx) => {
+    const lat = (order.coords && order.coords.lat) ? Number(order.coords.lat) : (baseLat + (idx * 0.005 * (idx % 2 === 0 ? 1 : -1)));
+    const lng = (order.coords && order.coords.lng) ? Number(order.coords.lng) : (baseLng + (idx * 0.005 * (idx % 3 === 0 ? 1 : -1)));
+
+    bounds.push([lat, lng]);
+
+    const seqNum = idx + 1;
+    const statusClass = order.status === 'delivered' ? 'status-delivered' :
+      (order.status === 'cancelled' ? 'status-cancelled' : 'status-planned');
+
+    const iconHtml = '<div class="map-order-pin ' + statusClass + '">' +
+      '<span class="pin-number">' + seqNum + '</span>' +
+      '</div>';
+
+    const customIcon = L.divIcon({
+      className: 'custom-order-div-icon',
+      html: iconHtml,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    const marker = L.marker([lat, lng], { icon: customIcon }).addTo(deliveryMarkersLayer);
+
+    const popupHtml = '<div style="min-width: 190px; font-family: Inter, sans-serif;">' +
+      '<div style="font-size: 11px; color: #64748b;">Остановка #' + seqNum + ' &bull; № ' + order.orderNumber + '</div>' +
+      '<div style="font-weight: 800; font-size: 14px; color: #003366; margin: 2px 0;">' + order.storeName + '</div>' +
+      (order.ownerName ? '<div style="font-size: 11px; color: #0066cc;">Владелец: ' + order.ownerName + (order.ownerPhone ? ' (' + order.ownerPhone + ')' : '') + '</div>' : '') +
+      '<div style="font-size: 11px; color: #334155; margin: 2px 0;">' + (order.address || 'Адрес не указан') + '</div>' +
+      '<div style="font-weight: 800; font-size: 13px; color: #003366; margin: 4px 0;">Сумма: ' + formatPrice(order.totalAmount) + ' сум</div>' +
+      '<div style="display: flex; gap: 4px; margin: 6px 0;">' +
+      '<button type="button" class="btn-step" style="font-size: 10px; padding: 3px 6px;" onclick="updateOrderStatusFromMap(\'' + order.id + '\', \'planned\')">Ожидание</button>' +
+      '<button type="button" class="btn-step" style="font-size: 10px; padding: 3px 6px; color: #166534;" onclick="updateOrderStatusFromMap(\'' + order.id + '\', \'delivered\')">&check; Сдано</button>' +
+      '<button type="button" class="btn-step" style="font-size: 10px; padding: 3px 6px; color: #ef4444;" onclick="updateOrderStatusFromMap(\'' + order.id + '\', \'cancelled\')">&times; Отклонить</button>' +
+      '</div>' +
+      '<div style="display: flex; gap: 4px; margin-top: 6px;">' +
+      '<button type="button" class="btn-step add-first" style="font-size: 10px; padding: 3px 8px; flex: 1;" onclick="openOrderModalById(\'' + order.id + '\')">Открыть заказ</button>' +
+      '<button type="button" class="btn-yandex-nav" style="font-size: 10px; padding: 3px 6px; border: none; cursor: pointer;" onclick="openInNavigator(\'' + lat + '\', \'' + lng + '\', \'' + sanitizeXml(order.storeName) + '\')">Навигатор</button>' +
+      '</div>' +
+      '</div>';
+
+    marker.bindPopup(popupHtml);
+  });
+
+  if (bounds.length > 0 && deliveryMapInstance) {
+    if (bounds.length === 1) {
+      deliveryMapInstance.setView(bounds[0], 14);
+    } else {
+      deliveryMapInstance.fitBounds(bounds, { padding: [30, 30] });
+    }
+  }
+
+  const listContainer = document.getElementById('mapOrdersList');
+  if (listContainer) {
+    if (!ordersList.length) {
+      listContainer.innerHTML = '<div style="padding: 16px; text-align: center; color: var(--text-muted); font-size: 12px;">На выбранную дату нет активных заказов</div>';
+      return;
+    }
+
+    listContainer.innerHTML = ordersList.map((order, idx) => {
+      const seqNum = idx + 1;
+      const statusClass = order.status === 'delivered' ? 'color: var(--success); font-weight: 700;' :
+        (order.status === 'cancelled' ? 'color: var(--danger); font-weight: 700;' : 'color: #92400e; font-weight: 600;');
+      const statusText = order.status === 'delivered' ? 'Сдано' :
+        (order.status === 'cancelled' ? 'Отклонено' : 'Ожидание');
+
+      const lat = (order.coords && order.coords.lat) ? Number(order.coords.lat) : baseLat;
+      const lng = (order.coords && order.coords.lng) ? Number(order.coords.lng) : baseLng;
+
+      return '<div class="map-order-row-card">' +
+        '<div style="display: flex; align-items: center; gap: 10px;">' +
+        '<div class="map-order-seq-num">' + seqNum + '</div>' +
+        '<div>' +
+        '<div style="font-weight: 700; font-size: 13px; color: var(--primary-navy);">' + order.storeName + '</div>' +
+        '<div style="font-size: 11px; color: var(--text-muted);">' + (order.address || 'Адрес не указан') + ' &bull; № ' + order.orderNumber + '</div>' +
+        '<div style="font-size: 11px; ' + statusClass + '">' + statusText + ' &bull; ' + formatPrice(order.totalAmount) + ' сум</div>' +
+        '</div>' +
+        '</div>' +
+        '<div style="display: flex; gap: 6px;">' +
+        '<button type="button" class="btn-step" style="font-size: 11px; padding: 4px 8px;" onclick="openOrderModalById(\'' + order.id + '\')">Детали</button>' +
+        '<button type="button" class="btn-yandex-nav" style="font-size: 11px; padding: 4px 8px; border: none; cursor: pointer;" onclick="openInNavigator(\'' + lat + '\', \'' + lng + '\', \'' + sanitizeXml(order.storeName) + '\')">Навигатор</button>' +
+        '</div>' +
+        '</div>';
+    }).join('');
+  }
+}
+
+function optimizeDeliveryRoute() {
+  if (!currentRouteStops || currentRouteStops.length <= 1) {
+    showToast('Для построения маршрута нужно минимум 2 заказа');
+    return;
+  }
+
+  showToast('Построение оптимального маршрута...');
+  const optimized = solveNearestNeighborTsp(currentRouteStops);
+  currentRouteStops = optimized;
+
+  renderMarkersAndStopList(currentRouteStops, true);
+
+  const baseLat = 41.3111;
+  const baseLng = 69.2797;
+  const latlngs = currentRouteStops.map((o, idx) => {
+    const lat = (o.coords && o.coords.lat) ? Number(o.coords.lat) : (baseLat + (idx * 0.005 * (idx % 2 === 0 ? 1 : -1)));
+    const lng = (o.coords && o.coords.lng) ? Number(o.coords.lng) : (baseLng + (idx * 0.005 * (idx % 3 === 0 ? 1 : -1)));
+    return [lat, lng];
+  });
+
+  if (deliveryRoutePolyline) {
+    deliveryMapInstance.removeLayer(deliveryRoutePolyline);
+  }
+
+  deliveryRoutePolyline = L.polyline(latlngs, {
+    color: '#0066cc',
+    weight: 4,
+    opacity: 0.85,
+    dashArray: '6, 6'
+  }).addTo(deliveryMapInstance);
+
+  let totalKm = 0;
+  for (let i = 0; i < latlngs.length - 1; i++) {
+    totalKm += calculateHaversineDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
+  }
+
+  const routeInfo = document.getElementById('routeInfoBanner');
+  const routeDistText = document.getElementById('routeDistanceText');
+  const routeCountText = document.getElementById('routePointsCountText');
+
+  if (routeInfo) routeInfo.style.display = 'block';
+  if (routeDistText) routeDistText.innerText = totalKm.toFixed(1) + ' км';
+  if (routeCountText) routeCountText.innerText = latlngs.length + ' точек';
+
+  const btnMultiYandex = document.getElementById('btnOpenYandexRouteMulti');
+  if (btnMultiYandex) {
+    btnMultiYandex.style.display = 'inline-flex';
+    btnMultiYandex.href = 'https://yandex.ru/maps/?rtext=' + latlngs.map(p => p[0] + ',' + p[1]).join('~') + '&rtt=auto';
+  }
+
+  showToast('Оптимальный маршрут построен: ' + totalKm.toFixed(1) + ' км');
+}
+
+window.openOrderModalById = function (orderId) {
+  const o = allOrders.find(item => item.id === orderId);
+  if (o) openOrderModal(o);
+};
+
+window.updateOrderStatusFromMap = async function (orderId, newStatus) {
+  const o = allOrders.find(item => item.id === orderId);
+  if (!o) return;
+  selectedOrder = o;
+  await updateOrderStatus(newStatus);
+  renderDeliveryRouteMap();
+};
 
 function buildSingleCostTableXml(order) {
   const orderNumber = sanitizeXml(order.orderNumber || '000001');
@@ -2135,6 +2750,10 @@ async function generateCostDocxBlob(orders) {
 }
 
 async function downloadOrderCostDocx() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   if (!selectedOrder) return;
   showToast('Формирование отчёта себестоимости...');
   try {
@@ -2156,6 +2775,10 @@ async function downloadOrderCostDocx() {
 }
 
 async function shareOrderCostToTelegram() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   if (!selectedOrder) return;
   const o = selectedOrder;
   const cisFormatted = o.deliveryDate ? o.deliveryDate.split('-').reverse().join('.') : '-';
@@ -2491,6 +3114,10 @@ async function generateSupplierDailyCostDocxBlob(orders, cisDate) {
 }
 
 async function downloadBatchCostAsortiDocx() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   const batchInput = document.getElementById('batchDateInput');
   const d = batchInput ? batchInput.value : '';
   if (!d) {
@@ -2526,6 +3153,10 @@ async function downloadBatchCostAsortiDocx() {
 }
 
 async function shareBatchCostAsortiToTelegram() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   const batchInput = document.getElementById('batchDateInput');
   const d = batchInput ? batchInput.value : '';
   if (!d) {
@@ -2620,6 +3251,10 @@ async function shareBatchCostAsortiToTelegram() {
 }
 
 async function downloadBatchCostSupplierDocx() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   const batchInput = document.getElementById('batchDateInput');
   const d = batchInput ? batchInput.value : '';
   if (!d) {
@@ -2655,6 +3290,10 @@ async function downloadBatchCostSupplierDocx() {
 }
 
 async function shareBatchCostSupplierToTelegram() {
+  if (currentRole === 'AGENT') {
+    showToast('Доступ к себестоимости закрыт для агента');
+    return;
+  }
   const batchInput = document.getElementById('batchDateInput');
   const d = batchInput ? batchInput.value : '';
   if (!d) {

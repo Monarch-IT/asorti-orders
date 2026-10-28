@@ -1,7 +1,7 @@
 {
-  "versionCode": 11,
-  "versionName": "1.1.0",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.0/AsortiOrders.apk",
-  "changelog": "• Добавлено 20 новых товаров (Palmolive, Elseve, Pantene, Garnier, Dove, Fairy, Grass, Ракша, Vernel, Иран гель, Perwoll, Ariel Капсулы)\n• Полная палитра цветов и гибридных ароматов для Yumoş (14 цветов/оттенков)\n• Выбор цветов для Vernel (Бледно-розовый, С кокосом) и Perwoll 1 л (Красный, Чёрный)",
+  "versionCode": 13,
+  "versionName": "1.1.2",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.2/AsortiOrders.apk",
+  "changelog": "• Отдельная категория и тег «Капсулы» для стирки\n• Умный быстрый поиск товаров по бренду, весу и характеристикам\n• Индивидуальный профиль сотрудника с автоматическим указанием имени в накладных\n• Интерактивная карта доставки и построение оптимального маршрута\n• Повышение стабильности оформления накладных и работы в офлайн-режиме",
   "forceUpdate": false
 }

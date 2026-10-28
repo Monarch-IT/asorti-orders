@@ -1161,3 +1161,213 @@ body {
   border-radius: var(--radius-xs);
   margin-top: 3px;
 }
+
+body.role-agent .owner-only {
+  display: none !important;
+}
+
+.header-right-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-badge-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.account-badge-btn:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.account-badge-btn.is-agent {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: rgba(245, 158, 11, 0.6);
+  color: #fef3c7;
+}
+
+.role-selector-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.role-card-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  background: #ffffff;
+  transition: all 0.2s;
+}
+
+.role-card-option:has(input:checked) {
+  border-color: var(--primary-blue);
+  background: var(--accent-light);
+}
+
+.role-card-box {
+  flex: 1;
+}
+
+.role-card-title {
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--primary-navy);
+}
+
+.role-card-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.delivery-map-wrapper {
+  margin-top: 8px;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  border: 1.5px solid var(--border-color);
+  background: #f8fafc;
+  box-shadow: var(--shadow-sm);
+}
+
+.delivery-full-map {
+  width: 100%;
+  height: 380px;
+  z-index: 10;
+}
+
+@media (min-width: 1024px) {
+  .delivery-full-map {
+    height: 480px;
+  }
+}
+
+.map-stats-summary {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.map-stat-chip {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.map-stat-chip.stat-total {
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: var(--text-main);
+}
+
+.map-stat-chip.stat-planned {
+  background: #fef3c7;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
+.map-stat-chip.stat-delivered {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
+.map-stat-chip.stat-cancelled {
+  background: #fee2e2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.map-stat-chip.stat-sum {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+  color: #1e40af;
+  margin-left: auto;
+}
+
+.map-order-pin {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 12px;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  transition: transform 0.2s;
+}
+
+.map-order-pin.status-planned {
+  background: #f59e0b;
+}
+
+.map-order-pin.status-delivered {
+  background: #10b981;
+}
+
+.map-order-pin.status-cancelled {
+  background: #ef4444;
+}
+
+.map-order-pin.status-intransit {
+  background: #2563eb;
+}
+
+.map-orders-sequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.map-order-row-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: #ffffff;
+  transition: background 0.15s;
+}
+
+.map-order-row-card:hover {
+  background: #f8fafc;
+}
+
+.map-order-seq-num {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--primary-navy);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+

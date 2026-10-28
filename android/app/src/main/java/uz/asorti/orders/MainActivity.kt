@@ -81,6 +81,7 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("SetJavaScriptEnabled")
     private fun configureWebView() {
+        WebView.setWebContentsDebuggingEnabled(false)
         val s = webView.settings
         s.javaScriptEnabled = true
         s.domStorageEnabled = true
@@ -105,6 +106,26 @@ class MainActivity : AppCompatActivity() {
 
             override fun onPageFinished(view: WebView?, url: String?) {
                 swipeRefresh.isRefreshing = false
+            }
+
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                if (url.startsWith("yandexnavi:") || url.startsWith("yandexmaps:") || url.startsWith("geo:") || url.startsWith("intent:") || url.contains("yandex.ru/maps") || url.contains("maps.yandex.ru") || url.contains("maps.google.com") || url.startsWith("tel:") || url.startsWith("mailto:")) {
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                        startActivity(intent)
+                        return true
+                    } catch (e: Exception) {
+                        if (url.startsWith("yandexnavi:")) {
+                            val fallbackUrl = url.replace("yandexnavi://build_route_on_map?lat_to=", "https://yandex.ru/maps/?rtext=~").replace("&lon_to=", ",") + "&rtt=auto"
+                            try {
+                                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(fallbackUrl)))
+                                return true
+                            } catch (e2: Exception) {}
+                        }
+                    }
+                }
+                return super.shouldOverrideUrlLoading(view, request)
             }
 
             override fun shouldInterceptRequest(view: WebView?, request: WebResourceRequest?): WebResourceResponse? {
@@ -257,6 +278,36 @@ class MainActivity : AppCompatActivity() {
                     return@runOnUiThread
                 }
                 UpdateChecker.checkForUpdates(this@MainActivity, userInitiated = true)
+            }
+        }
+
+        @JavascriptInterface
+        fun openYandexNavigator(lat: Double, lng: Double, label: String) {
+            runOnUiThread {
+                try {
+                    val naviIntent = Intent(Intent.ACTION_VIEW, Uri.parse("yandexnavi://build_route_on_map?lat_to=$lat&lon_to=$lng"))
+                    naviIntent.setPackage("ru.yandex.yandexnavi")
+                    if (naviIntent.resolveActivity(packageManager) != null) {
+                        startActivity(naviIntent)
+                        return@runOnUiThread
+                    }
+                } catch (e: Exception) {}
+
+                try {
+                    val mapsIntent = Intent(Intent.ACTION_VIEW, Uri.parse("yandexmaps://maps.yandex.ru/?rtext=~$lat,$lng&rtt=auto"))
+                    mapsIntent.setPackage("ru.yandex.yandexmaps")
+                    if (mapsIntent.resolveActivity(packageManager) != null) {
+                        startActivity(mapsIntent)
+                        return@runOnUiThread
+                    }
+                } catch (e: Exception) {}
+
+                try {
+                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://yandex.ru/maps/?rtext=~$lat,$lng&rtt=auto"))
+                    startActivity(webIntent)
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Не удалось открыть навигатор", Toast.LENGTH_SHORT).show()
+                }
             }
         }
     }
