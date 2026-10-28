@@ -1,7 +1,7 @@
 {
-  "versionCode": 1,
-  "versionName": "1.0.0",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.0.0/AsortiOrders.apk",
-  "changelog": "• Экспорт накладных и сборных листов по датам в DOCX и PDF\\n• Мгновенная отправка накладных и сборников в Telegram\\n• Новый фирменный прозрачный логотип и иконка ASSORTI TRADE PLUS\\n• Полная интеграция с базой данных Supabase",
+  "versionCode": 13,
+  "versionName": "1.1.2",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.2/AsortiOrders.apk",
+  "changelog": "• Отдельная категория и тег «Капсулы» для стирки\n• Умный быстрый поиск товаров по бренду, весу и характеристикам\n• Индивидуальный профиль сотрудника с автоматическим указанием имени в накладных\n• Интерактивная карта доставки и построение оптимального маршрута\n• Повышение стабильности оформления накладных и работы в офлайн-режиме",
   "forceUpdate": false
 }
