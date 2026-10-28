@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ASORTI TRADE PLUS — Управление заказами</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -74,26 +74,26 @@
             <input type="text" id="storeNameInput" class="form-input" placeholder="Например: Hummo Fayz, Baraka Market, Оазис..." required>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-            <div>
+          <div class="form-row-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div style="min-width: 0;">
               <label class="form-label" for="ownerNameInput">Владелец магазина</label>
               <input type="text" id="ownerNameInput" class="form-input" placeholder="Имя владельца">
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label class="form-label" for="ownerPhoneInput">Номер телефона владельца</label>
               <input type="tel" id="ownerPhoneInput" class="form-input" placeholder="+998 90 123 45 67">
             </div>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
-            <div>
+          <div class="form-row-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;">
+            <div style="min-width: 0;">
               <label class="form-label" for="deliveryDateInput">Дата доставки*</label>
               <div class="date-input-wrap">
                 <input type="date" id="deliveryDateInput" class="form-input date-native-input" required>
                 <div class="date-display-badge" id="dateDisplayBadge">--.--.----</div>
               </div>
             </div>
-            <div>
+            <div style="min-width: 0;">
               <label class="form-label" for="agentNameInput">Торговый агент*</label>
               <input type="text" id="agentNameInput" class="form-input" placeholder="Имя агента" value="Javohir" required>
             </div>

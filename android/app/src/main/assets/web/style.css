@@ -42,22 +42,34 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   background-color: var(--bg-page);
   color: var(--text-main);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   padding-bottom: 90px;
   font-size: 14px;
   line-height: 1.5;
 }
 
 .app-container {
+  width: 100%;
   max-width: 520px;
   margin: 0 auto;
   min-height: 100vh;
   background: #ffffff;
   position: relative;
   box-shadow: 0 0 35px rgba(0, 51, 102, 0.08);
+  overflow-x: hidden;
 }
 
 @media (min-width: 1024px) {
@@ -1596,4 +1608,53 @@ body.role-agent .account-profile-card.card-agent {
   justify-content: center;
   flex-shrink: 0;
 }
+
+@media (max-width: 480px) {
+  .top-header {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+  .brand-logo-img {
+    width: 32px;
+    height: 32px;
+  }
+  .brand-info h1 {
+    font-size: 13px;
+    letter-spacing: 0;
+  }
+  .brand-info p {
+    font-size: 10px;
+  }
+  .account-badge-btn {
+    padding: 5px 9px;
+    font-size: 11px;
+    gap: 5px;
+    max-width: 140px;
+  }
+  .account-badge-btn span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .form-row-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+  .date-input-wrap {
+    display: flex;
+    gap: 6px;
+  }
+  .date-display-badge {
+    padding: 8px 10px;
+    font-size: 11px;
+  }
+  .page-view {
+    padding: 12px 10px;
+  }
+  .light-card {
+    padding: 12px;
+    border-radius: var(--radius-sm);
+  }
+}
+
 

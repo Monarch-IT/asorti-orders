@@ -742,6 +742,50 @@ function matchProductTokens(product, tokens) {
   });
 }
 
+function getEffectiveProductCostPrice(item) {
+  if (!item) return 0;
+  const cost = Number(item.costPrice);
+  if (cost > 0) return cost;
+
+  const catalog = (window.EMBEDDED_PRODUCTS && window.EMBEDDED_PRODUCTS.length)
+    ? window.EMBEDDED_PRODUCTS
+    : ((allProducts && allProducts.length) ? allProducts : []);
+
+  if (!catalog.length) return 0;
+
+  if (item.id !== undefined && item.id !== null && item.id !== '') {
+    const byId = catalog.find(p => String(p.id) === String(item.id));
+    if (byId && Number(byId.costPrice) > 0) {
+      return Number(byId.costPrice);
+    }
+  }
+
+  const rawItemName = String(item.fullName || item.name || '').trim().toLowerCase();
+  if (rawItemName) {
+    const byExactName = catalog.find(p => String(p.fullName || '').trim().toLowerCase() === rawItemName);
+    if (byExactName && Number(byExactName.costPrice) > 0) {
+      return Number(byExactName.costPrice);
+    }
+
+    const clean = s => String(s || '').toLowerCase().replace(/ё/g, 'е').replace(/[^a-zа-я0-9]/g, '');
+    const cleanItemName = clean(rawItemName);
+    const byCleanName = catalog.find(p => clean(p.fullName) === cleanItemName);
+    if (byCleanName && Number(byCleanName.costPrice) > 0) {
+      return Number(byCleanName.costPrice);
+    }
+
+    const byPrefix = catalog.find(p => {
+      const c = clean(p.fullName);
+      return (c && cleanItemName && (c.includes(cleanItemName) || cleanItemName.includes(c)));
+    });
+    if (byPrefix && Number(byPrefix.costPrice) > 0) {
+      return Number(byPrefix.costPrice);
+    }
+  }
+
+  return 0;
+}
+
 async function loadProducts() {
   if (window.EMBEDDED_PRODUCTS && Array.isArray(window.EMBEDDED_PRODUCTS) && window.EMBEDDED_PRODUCTS.length > 0) {
     allProducts = window.EMBEDDED_PRODUCTS;
@@ -754,7 +798,28 @@ async function loadProducts() {
     if (res.ok) {
       const data = await res.json();
       if (Array.isArray(data) && data.length > 0) {
-        allProducts = data;
+        const costMap = new Map();
+        if (window.EMBEDDED_PRODUCTS && Array.isArray(window.EMBEDDED_PRODUCTS)) {
+          window.EMBEDDED_PRODUCTS.forEach(p => {
+            if (Number(p.costPrice) > 0) {
+              costMap.set(String(p.id), Number(p.costPrice));
+              costMap.set(String(p.fullName || '').trim().toLowerCase(), Number(p.costPrice));
+            }
+          });
+        }
+
+        allProducts = data.map(item => {
+          let cPrice = Number(item.costPrice) || 0;
+          if (cPrice <= 0) {
+            const byId = costMap.get(String(item.id));
+            const byName = costMap.get(String(item.fullName || '').trim().toLowerCase());
+            cPrice = byId || byName || 0;
+          }
+          return {
+            ...item,
+            costPrice: cPrice
+          };
+        });
         updateProductCountBadge();
         filterAndRenderProducts();
       }
@@ -1069,7 +1134,7 @@ async function submitOrder() {
       fullName: i.product.fullName,
       volume: i.product.volume || '-',
       price: Number(i.product.price) || 0,
-      costPrice: Number(i.product.costPrice) || 0,
+      costPrice: getEffectiveProductCostPrice(i.product),
       quantity: Number(i.quantity) || 1,
       colorText: colorText,
       colorBreakdown: i.colorBreakdown || null
@@ -1385,11 +1450,7 @@ function openOrderModal(order) {
 
   let orderCost = 0;
   (order.items || []).forEach(item => {
-    let costPrice = Number(item.costPrice);
-    if (!costPrice || isNaN(costPrice)) {
-      const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
-      costPrice = found ? Number(found.costPrice) || 0 : 0;
-    }
+    const costPrice = getEffectiveProductCostPrice(item);
     orderCost += ((Number(item.quantity) || 1) * costPrice);
   });
   const orderProfit = Math.max(0, (order.totalAmount || 0) - orderCost);
@@ -2871,11 +2932,7 @@ function buildSingleCostTableXml(order) {
     const qty = Number(item.quantity) || 1;
     const sellPrice = Number(item.price) || 0;
 
-    let costPrice = Number(item.costPrice);
-    if (!costPrice || isNaN(costPrice)) {
-      const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
-      costPrice = found ? Number(found.costPrice) || 0 : 0;
-    }
+    const costPrice = getEffectiveProductCostPrice(item);
 
     const sellSum = qty * sellPrice;
     const costSum = qty * costPrice;
@@ -2973,11 +3030,7 @@ async function generateCostDocxBlob(orders) {
     (order.items || []).forEach(item => {
       const qty = Number(item.quantity) || 1;
       const sellPrice = Number(item.price) || 0;
-      let costPrice = Number(item.costPrice);
-      if (!costPrice || isNaN(costPrice)) {
-        const found = allProducts.find(p => p.id === item.id || p.fullName === item.fullName);
-        costPrice = found ? Number(found.costPrice) || 0 : 0;
-      }
+      const costPrice = getEffectiveProductCostPrice(item);
       grandSelling += (qty * sellPrice);
       grandCost += (qty * costPrice);
     });
@@ -3055,11 +3108,7 @@ async function shareOrderCostToTelegram() {
   (o.items || []).forEach(it => {
     const qty = Number(it.quantity) || 1;
     const sellPrice = Number(it.price) || 0;
-    let costPrice = Number(it.costPrice);
-    if (!costPrice || isNaN(costPrice)) {
-      const found = allProducts.find(p => p.id === it.id || p.fullName === it.fullName);
-      costPrice = found ? Number(found.costPrice) || 0 : 0;
-    }
+    const costPrice = getEffectiveProductCostPrice(it);
     totalSelling += (qty * sellPrice);
     totalCost += (qty * costPrice);
   });
@@ -3130,11 +3179,7 @@ function aggregateOrdersProducts(orders) {
       const rawKey = (item.id !== undefined && item.id !== null && item.id !== '') ? item.id : (name + '__' + vol);
       const key = String(rawKey).toLowerCase();
 
-      let costPrice = Number(item.costPrice);
-      if (!costPrice || isNaN(costPrice)) {
-        const found = allProducts.find(p => String(p.id) === String(item.id) || p.fullName === item.fullName);
-        costPrice = found ? Number(found.costPrice) || 0 : 0;
-      }
+      const costPrice = getEffectiveProductCostPrice(item);
       const sellPrice = Number(item.price) || 0;
       const qty = Number(item.quantity) || 1;
 
@@ -3153,8 +3198,12 @@ function aggregateOrdersProducts(orders) {
       }
 
       const rec = map.get(key);
+      if ((!rec.costPrice || rec.costPrice <= 0) && costPrice > 0) {
+        rec.costPrice = costPrice;
+      }
       rec.quantity += qty;
-      rec.totalCost += (qty * costPrice);
+      const appliedCost = rec.costPrice > 0 ? rec.costPrice : costPrice;
+      rec.totalCost += (qty * appliedCost);
       rec.totalSelling += (qty * sellPrice);
 
       if (item.colors && typeof item.colors === 'object') {

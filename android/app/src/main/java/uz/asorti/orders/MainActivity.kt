@@ -93,6 +93,8 @@ class MainActivity : AppCompatActivity() {
         s.setSupportZoom(false)
         s.builtInZoomControls = false
         s.displayZoomControls = false
+        s.useWideViewPort = true
+        s.loadWithOverviewMode = true
         s.cacheMode = if (isNetworkAvailable()) WebSettings.LOAD_NO_CACHE else WebSettings.LOAD_CACHE_ELSE_NETWORK
 
         webView.scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
