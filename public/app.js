@@ -867,7 +867,11 @@ function renderProductList() {
     const colorsTag = (p.colors && p.colors.length) ?
       '<div class="item-colors-badge"> Цвета: ' + p.colors.join(', ') + '</div>' : '';
 
-    const catLabel = p.category === 'КАПСУЛЫ ДЛЯ СТИРКИ' ? 'Капсулы' : p.category.split(' ')[0];
+    const catLabel = p.category === 'КАПСУЛЫ ДЛЯ СТИРКИ'
+      ? 'Капсулы'
+      : (p.category === 'КОНДИЦИОНЕРЫ'
+        ? 'Кондиционер'
+        : (p.category === 'СТИРАЛЬНЫЕ ПОРОШКИ' ? 'Порошок' : p.category.split(' ')[0]));
 
     return '<div class="product-row-item">' +
       '<div class="item-left">' +
