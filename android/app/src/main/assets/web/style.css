@@ -63,22 +63,22 @@ body {
 
 .app-container {
   width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0;
   min-height: 100vh;
   background: #ffffff;
   position: relative;
-  box-shadow: 0 0 35px rgba(0, 51, 102, 0.08);
   overflow-x: hidden;
 }
 
 @media (min-width: 1024px) {
   .app-container {
-    max-width: 1060px;
+    max-width: 1200px;
     margin: 20px auto;
     border-radius: var(--radius-lg);
     min-height: calc(100vh - 40px);
     border: 1px solid var(--border-color);
+    box-shadow: 0 0 35px rgba(0, 51, 102, 0.08);
     overflow: hidden;
   }
 }
@@ -1222,16 +1222,18 @@ body {
 .modal-content {
   background: #ffffff;
   width: 100%;
-  max-width: 520px;
-  max-height: 90vh;
+  max-width: 100%;
+  max-height: 92vh;
   overflow-y: auto;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
-  padding: 20px;
+  padding: 18px 14px;
   box-shadow: var(--shadow-elevated);
 }
 @media (min-width: 600px) {
   .modal-content {
+    max-width: 540px;
     border-radius: var(--radius-md);
+    padding: 20px;
   }
 }
 
@@ -1899,6 +1901,8 @@ body.role-agent .account-profile-card.card-agent {
   .top-header {
     padding: 10px 12px;
     gap: 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .brand-logo-img {
     width: 32px;
@@ -1915,7 +1919,7 @@ body.role-agent .account-profile-card.card-agent {
     padding: 5px 9px;
     font-size: 11px;
     gap: 5px;
-    max-width: 140px;
+    max-width: 120px;
   }
   .account-badge-btn span:last-child {
     overflow: hidden;
@@ -1935,11 +1939,29 @@ body.role-agent .account-profile-card.card-agent {
     font-size: 11px;
   }
   .page-view {
-    padding: 12px 10px;
+    padding: 10px 8px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .light-card {
-    padding: 12px;
+    padding: 12px 10px;
     border-radius: var(--radius-sm);
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .delivery-map-wrapper {
+    margin: 0;
+    width: 100%;
+    border-radius: var(--radius-sm);
+  }
+  .delivery-full-map {
+    height: 380px;
+    width: 100%;
+  }
+  .table-responsive {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
   }
 }
 
