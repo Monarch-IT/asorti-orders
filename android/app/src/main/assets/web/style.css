@@ -468,8 +468,22 @@ body {
   border-radius: var(--radius-full);
 }
 
-.form-group {
+.form-row-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   margin-bottom: 12px;
+  width: 100%;
+}
+.form-col {
+  min-width: 0;
+  width: 100%;
+}
+@media (max-width: 580px) {
+  .form-row-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
 }
 .form-label {
   display: block;
@@ -1851,16 +1865,8 @@ body.role-agent .account-profile-card.card-agent {
     white-space: nowrap;
   }
   .form-row-grid {
-    grid-template-columns: 1fr !important;
-    gap: 10px !important;
-  }
-  .date-input-wrap {
-    display: flex;
-    gap: 6px;
-  }
-  .date-display-badge {
-    padding: 8px 10px;
-    font-size: 11px;
+    grid-template-columns: 1fr;
+    gap: 10px;
   }
   .page-view {
     padding: 10px 8px;

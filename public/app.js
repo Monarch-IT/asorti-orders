@@ -245,9 +245,7 @@ async function syncOfflineOrders() {
 
 function initDateInputs() {
   const deliveryInput = document.getElementById('deliveryDateInput');
-  const dateBadge = document.getElementById('dateDisplayBadge');
   const batchInput = document.getElementById('batchDateInput');
-  const batchBadge = document.getElementById('batchDateDisplayBadge');
 
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -255,27 +253,12 @@ function initDateInputs() {
   const dd = String(today.getDate()).padStart(2, '0');
   const todayStr = yyyy + '-' + mm + '-' + dd;
 
-  function updateBadge(inputEl, badgeEl) {
-    if (!inputEl.value) {
-      badgeEl.innerText = '--.--.----';
-      return;
-    }
-    const parts = inputEl.value.split('-');
-    if (parts.length === 3) {
-      badgeEl.innerText = parts[2] + '.' + parts[1] + '.' + parts[0];
-    }
-  }
-
-  if (deliveryInput) {
+  if (deliveryInput && !deliveryInput.value) {
     deliveryInput.value = todayStr;
-    updateBadge(deliveryInput, dateBadge);
-    deliveryInput.addEventListener('input', () => updateBadge(deliveryInput, dateBadge));
   }
 
-  if (batchInput) {
+  if (batchInput && !batchInput.value) {
     batchInput.value = todayStr;
-    updateBadge(batchInput, batchBadge);
-    batchInput.addEventListener('input', () => updateBadge(batchInput, batchBadge));
   }
 }
 
