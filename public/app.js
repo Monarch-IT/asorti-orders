@@ -19,6 +19,7 @@ let modalMarker = null;
 let deliveryMapInstance = null;
 let deliveryMarkersLayer = null;
 let deliveryRoutePolyline = null;
+let deliveryAgentMarker = null;
 let selectedDeliveryDate = '';
 let currentRouteStops = [];
 
@@ -551,12 +552,65 @@ function initNavigation() {
       if (targetId) switchTab(targetId);
     });
   });
+
+  const btnOpenDrawer = document.getElementById('btnOpenMobileDrawer');
+  const btnCloseDrawer = document.getElementById('btnCloseMobileDrawer');
+  const drawerOverlay = document.getElementById('drawerOverlay');
+  const mobileDrawer = document.getElementById('mobileDrawer');
+
+  function openDrawer() {
+    if (mobileDrawer) mobileDrawer.classList.add('active');
+    if (drawerOverlay) drawerOverlay.classList.add('active');
+  }
+
+  function closeDrawer() {
+    if (mobileDrawer) mobileDrawer.classList.remove('active');
+    if (drawerOverlay) drawerOverlay.classList.remove('active');
+  }
+
+  if (btnOpenDrawer) btnOpenDrawer.addEventListener('click', openDrawer);
+  if (btnCloseDrawer) btnCloseDrawer.addEventListener('click', closeDrawer);
+  if (drawerOverlay) drawerOverlay.addEventListener('click', closeDrawer);
+
+  document.querySelectorAll('.drawer-menu-item[data-drawer-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.getAttribute('data-drawer-tab');
+      if (targetTab) {
+        switchTab(targetTab);
+        closeDrawer();
+      }
+    });
+  });
+
+  const btnOpenProfileDrawer = document.getElementById('btnOpenProfileFromDrawer');
+  if (btnOpenProfileDrawer) {
+    btnOpenProfileDrawer.addEventListener('click', () => {
+      closeDrawer();
+      openAccountModal();
+    });
+  }
+
+  const btnDrawerUpdate = document.getElementById('btnCheckUpdatesDrawer');
+  if (btnDrawerUpdate) {
+    btnDrawerUpdate.addEventListener('click', () => {
+      closeDrawer();
+      requestAppUpdate();
+    });
+  }
 }
 
 function switchTab(tabId) {
   document.querySelectorAll('.page-view').forEach(view => view.classList.remove('active'));
   document.querySelectorAll('.desktop-tab-btn, .nav-item').forEach(btn => {
     if (btn.getAttribute('data-tab') === tabId) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  document.querySelectorAll('.drawer-menu-item').forEach(btn => {
+    if (btn.getAttribute('data-drawer-tab') === tabId) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
@@ -2183,6 +2237,10 @@ function setupEventListeners() {
   if (btnUpdateMob) {
     btnUpdateMob.addEventListener('click', requestAppUpdate);
   }
+  const btnUpdateHdr = document.getElementById('btnCheckUpdatesHeader');
+  if (btnUpdateHdr) {
+    btnUpdateHdr.addEventListener('click', requestAppUpdate);
+  }
 
   const btnAccountSwitcher = document.getElementById('btnAccountSwitcher');
   if (btnAccountSwitcher) {
@@ -2423,6 +2481,9 @@ function applyRoleUi() {
   const ownerActiveStateBox = document.getElementById('ownerActiveStateBox');
   const ownerSecretAuthBox = document.getElementById('ownerSecretAuthBox');
 
+  const drawerRole = document.getElementById('drawerRoleLabel');
+  const drawerName = document.getElementById('drawerUserName');
+
   if (currentRole === 'OWNER') {
     document.body.classList.remove('role-agent');
     document.body.classList.add('role-owner');
@@ -2435,6 +2496,8 @@ function applyRoleUi() {
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
     }
+    if (drawerRole) drawerRole.innerText = 'Учредитель (Владелец)';
+    if (drawerName) drawerName.innerText = 'Режим владельцев';
     if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'block';
     if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   } else {
@@ -2449,6 +2512,8 @@ function applyRoleUi() {
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     }
+    if (drawerRole) drawerRole.innerText = 'Торговый представитель';
+    if (drawerName) drawerName.innerText = currentAgentName || 'Javohir';
     if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'none';
     if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   }
@@ -2486,12 +2551,36 @@ function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-function solveNearestNeighborTsp(points) {
+function getCurrentAgentPosition() {
+  return new Promise((resolve) => {
+    if (currentCoords && currentCoords.lat && currentCoords.lng) {
+      resolve(currentCoords);
+      return;
+    }
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        currentCoords = coords;
+        resolve(coords);
+      },
+      () => {
+        resolve(null);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 }
+    );
+  });
+}
+
+function solveNearestNeighborTsp(points, startCoords) {
   if (points.length <= 1) return points.slice();
   const unvisited = points.slice();
   const route = [];
-  const baseLat = 41.3111;
-  const baseLng = 69.2797;
+  const baseLat = (startCoords && startCoords.lat) ? Number(startCoords.lat) : 41.3111;
+  const baseLng = (startCoords && startCoords.lng) ? Number(startCoords.lng) : 69.2797;
 
   let currentLat = baseLat;
   let currentLng = baseLng;
@@ -2583,6 +2672,10 @@ function renderDeliveryRouteMap() {
     if (deliveryRoutePolyline) {
       deliveryMapInstance.removeLayer(deliveryRoutePolyline);
       deliveryRoutePolyline = null;
+    }
+    if (deliveryAgentMarker) {
+      deliveryMapInstance.removeLayer(deliveryAgentMarker);
+      deliveryAgentMarker = null;
     }
   }
 
@@ -2712,55 +2805,118 @@ function renderMarkersAndStopList(ordersWithCoords, ordersWithoutCoords, isOptim
   }
 }
 
-function optimizeDeliveryRoute() {
+async function optimizeDeliveryRoute() {
   const dayOrders = allOrders.filter(o => o.deliveryDate === selectedDeliveryDate && o.status !== 'deleted');
   const ordersWithCoords = dayOrders.filter(o => o.coords && o.coords.lat && o.coords.lng && !isNaN(Number(o.coords.lat)) && !isNaN(Number(o.coords.lng)));
   const ordersWithoutCoords = dayOrders.filter(o => !o.coords || !o.coords.lat || !o.coords.lng || isNaN(Number(o.coords.lat)) || isNaN(Number(o.coords.lng)));
 
-  if (ordersWithCoords.length <= 1) {
-    showToast('Для построения маршрута нужно минимум 2 заказа с геометкой');
+  if (ordersWithCoords.length === 0) {
+    showToast('На выбранную дату нет заказов с геометками');
     return;
   }
 
-  showToast('Построение оптимального маршрута...');
-  const optimized = solveNearestNeighborTsp(ordersWithCoords);
+  showToast('Построение оптимального маршрута по дорогам...');
+
+  const agentCoords = await getCurrentAgentPosition();
+
+  const optimized = solveNearestNeighborTsp(ordersWithCoords, agentCoords);
   currentRouteStops = optimized;
 
   renderMarkersAndStopList(currentRouteStops, ordersWithoutCoords, true);
 
-  const latlngs = currentRouteStops.map(o => [Number(o.coords.lat), Number(o.coords.lng)]);
+  if (deliveryAgentMarker) {
+    deliveryMapInstance.removeLayer(deliveryAgentMarker);
+    deliveryAgentMarker = null;
+  }
+
+  const waypoints = [];
+  if (agentCoords && agentCoords.lat && agentCoords.lng) {
+    waypoints.push([Number(agentCoords.lat), Number(agentCoords.lng)]);
+
+    const agentIcon = L.divIcon({
+      className: 'custom-agent-div-icon',
+      html: '<div class="agent-location-pin"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>',
+      iconSize: [28, 28],
+      iconAnchor: [14, 14]
+    });
+
+    deliveryAgentMarker = L.marker([Number(agentCoords.lat), Number(agentCoords.lng)], {
+      icon: agentIcon,
+      zIndexOffset: 1000
+    }).addTo(deliveryMapInstance);
+
+    deliveryAgentMarker.bindPopup('<div style="font-weight:700;font-size:12px;color:#003366;">Моё текущее местоположение</div>');
+  }
+
+  currentRouteStops.forEach(o => {
+    waypoints.push([Number(o.coords.lat), Number(o.coords.lng)]);
+  });
 
   if (deliveryRoutePolyline) {
     deliveryMapInstance.removeLayer(deliveryRoutePolyline);
+    deliveryRoutePolyline = null;
   }
 
-  deliveryRoutePolyline = L.polyline(latlngs, {
+  let routeCoords = null;
+  let totalKm = 0;
+
+  if (waypoints.length >= 2) {
+    try {
+      const osrmString = waypoints.map(p => p[1].toFixed(6) + ',' + p[0].toFixed(6)).join(';');
+      const osrmUrl = 'https://router.project-osrm.org/route/v1/driving/' + osrmString + '?overview=full&geometries=geojson';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(osrmUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.code === 'Ok' && data.routes && data.routes[0]) {
+          const route = data.routes[0];
+          totalKm = route.distance / 1000;
+          routeCoords = route.geometry.coordinates.map(c => [c[1], c[0]]);
+        }
+      }
+    } catch (e) {
+      console.warn('OSRM routing fallback to direct lines', e);
+    }
+  }
+
+  if (!routeCoords) {
+    routeCoords = waypoints;
+    totalKm = 0;
+    for (let i = 0; i < waypoints.length - 1; i++) {
+      totalKm += calculateHaversineDistance(waypoints[i][0], waypoints[i][1], waypoints[i + 1][0], waypoints[i + 1][1]);
+    }
+  }
+
+  deliveryRoutePolyline = L.polyline(routeCoords, {
     color: '#0066cc',
-    weight: 4,
-    opacity: 0.85,
-    dashArray: '6, 6'
+    weight: 5,
+    opacity: 0.9,
+    lineJoin: 'round',
+    lineCap: 'round'
   }).addTo(deliveryMapInstance);
 
-  let totalKm = 0;
-  for (let i = 0; i < latlngs.length - 1; i++) {
-    totalKm += calculateHaversineDistance(latlngs[i][0], latlngs[i][1], latlngs[i + 1][0], latlngs[i + 1][1]);
-  }
+  try {
+    deliveryMapInstance.fitBounds(deliveryRoutePolyline.getBounds(), { padding: [35, 35] });
+  } catch (err) {}
 
   const routeInfo = document.getElementById('routeInfoBanner');
   const routeDistText = document.getElementById('routeDistanceText');
   const routeCountText = document.getElementById('routePointsCountText');
 
   if (routeInfo) routeInfo.style.display = 'block';
-  if (routeDistText) routeDistText.innerText = totalKm.toFixed(1) + ' км';
-  if (routeCountText) routeCountText.innerText = latlngs.length + ' точек';
+  if (routeDistText) routeDistText.innerText = totalKm.toFixed(1) + ' км (по дорогам)';
+  if (routeCountText) routeCountText.innerText = currentRouteStops.length + ' точек' + (agentCoords ? ' + старт от вас' : '');
 
   const btnMultiYandex = document.getElementById('btnOpenYandexRouteMulti');
   if (btnMultiYandex) {
     btnMultiYandex.style.display = 'inline-flex';
-    btnMultiYandex.href = 'https://yandex.ru/maps/?rtext=' + latlngs.map(p => p[0] + ',' + p[1]).join('~') + '&rtt=auto';
+    btnMultiYandex.href = 'https://yandex.ru/maps/?rtext=' + waypoints.map(p => p[0] + ',' + p[1]).join('~') + '&rtt=auto';
   }
 
-  showToast('Оптимальный маршрут построен: ' + totalKm.toFixed(1) + ' км');
+  showToast('Маршрут построен по дорогам: ' + totalKm.toFixed(1) + ' км');
 }
 
 let setLocationMapInstance = null;

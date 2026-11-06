@@ -1,7 +1,7 @@
 {
-  "versionCode": 15,
-  "versionName": "1.1.4",
-  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.4/AsortiOrders.apk",
-  "changelog": "• Обновлена цена продажи Yumoş Кондиционер 1.44 л: 50 000 сум\n• Добавлена отдельная категория и фильтр «Кондиционеры»\n• Yumoş Ведро переведено в категорию «Порошок»\n• Улучшена фильтрация каталога товаров",
-  "forceUpdate": false
+  "versionCode": 16,
+  "versionName": "1.1.5",
+  "apkUrl": "https://github.com/Monarch-IT/asorti-orders/releases/download/v1.1.5/AsortiOrders.apk",
+  "changelog": "• Построение маршрута по дорогам через OSRM с учетом текущей GPS-локации\n• Выдвижное боковое меню (сайдбар) для быстрого доступа ко всем разделам\n• Кнопка обновления в шапке и сайдбаре для удобного доступа со смартфонов\n• Адаптация нижней панели и верстки под 100% ширины экранов смартфонов",
+  "forceUpdate": true
 }
