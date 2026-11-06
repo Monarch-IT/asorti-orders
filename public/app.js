@@ -2480,9 +2480,7 @@ function applyRoleUi() {
   const agentInput = document.getElementById('agentNameInput');
   const ownerActiveStateBox = document.getElementById('ownerActiveStateBox');
   const ownerSecretAuthBox = document.getElementById('ownerSecretAuthBox');
-
-  const drawerRole = document.getElementById('drawerRoleLabel');
-  const drawerName = document.getElementById('drawerUserName');
+  const drawerProfileBtnText = document.getElementById('drawerProfileBtnText');
 
   if (currentRole === 'OWNER') {
     document.body.classList.remove('role-agent');
@@ -2496,8 +2494,7 @@ function applyRoleUi() {
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>';
     }
-    if (drawerRole) drawerRole.innerText = 'Учредитель (Владелец)';
-    if (drawerName) drawerName.innerText = 'Режим владельцев';
+    if (drawerProfileBtnText) drawerProfileBtnText.innerText = 'Владельцы (Себестоимость)';
     if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'block';
     if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   } else {
@@ -2512,8 +2509,7 @@ function applyRoleUi() {
     if (badgeIcon) {
       badgeIcon.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
     }
-    if (drawerRole) drawerRole.innerText = 'Торговый представитель';
-    if (drawerName) drawerName.innerText = currentAgentName || 'Javohir';
+    if (drawerProfileBtnText) drawerProfileBtnText.innerText = 'Профиль: ' + (currentAgentName || 'Javohir');
     if (ownerActiveStateBox) ownerActiveStateBox.style.display = 'none';
     if (ownerSecretAuthBox) ownerSecretAuthBox.style.display = 'none';
   }
